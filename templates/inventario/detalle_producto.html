@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ producto.nombre }}{% endblock %}
+{% block page_title %}{{ producto.nombre }}{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body text-center">
+        {% if producto.imagen %}
+          <img src="{{ producto.imagen.url }}" class="img-fluid rounded mb-3" style="max-height:150px">
+        {% else %}
+          <div class="bg-light rounded d-flex align-items-center justify-content-center mb-3" style="height:120px;font-size:3rem">&#x1F4E6;</div>
+        {% endif %}
+        <h5 class="fw-bold">{{ producto.nombre }}</h5>
+        <p class="text-muted small">{{ producto.descripcion|default:"Sin descripcion" }}</p>
+        <div class="d-grid gap-2">
+          <a href="/inventario/productos/{{ producto.pk }}/editar/" class="btn btn-outline-primary btn-sm"><i class="fas fa-edit me-1"></i>Editar</a>
+          <a href="/inventario/productos/{{ producto.pk }}/ajustar/" class="btn btn-outline-warning btn-sm"><i class="fas fa-sliders-h me-1"></i>Ajustar Stock</a>
+          <a href="/inventario/productos/{{ producto.pk }}/lote/" class="btn btn-outline-success btn-sm"><i class="fas fa-plus me-1"></i>Agregar Lote</a>
+        </div>
+      </div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tr><td class="text-muted">Codigo</td><td>{{ producto.codigo_barras|default:"-" }}</td></tr>
+          <tr><td class="text-muted">Categoria</td><td>{{ producto.categoria }}</td></tr>
+          <tr><td class="text-muted">Proveedor</td><td>{{ producto.proveedor|default:"-" }}</td></tr>
+          <tr><td class="text-muted">Unidad</td><td>{{ producto.get_unidad_medida_display }}</td></tr>
+          <tr><td class="text-muted">P. Compra</td><td>Bs. {{ producto.precio_compra|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">P. Venta</td><td class="fw-bold text-success">Bs. {{ producto.precio_venta|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">Margen</td><td>{{ producto.margen_ganancia|floatformat:1 }}%</td></tr>
+          <tr><td class="text-muted">Stock Min.</td><td>{{ producto.stock_minimo }}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card mb-3">
+      <div class="card-header"><i class="fas fa-warehouse me-2"></i>Stock Actual</div>
+      <div class="card-body text-center">
+        <div style="font-size:3rem;font-weight:700;color:{% if producto.stock_bajo %}#dc2626{% else %}#1a6b3c{% endif %}">
+          {{ producto.stock_actual }}
+        </div>
+        <div class="text-muted">{{ producto.get_unidad_medida_display }} disponibles</div>
+        {% if producto.stock_bajo %}
+          <div class="alert alert-danger mt-2 mb-0 py-1"><i class="fas fa-exclamation-triangle me-1"></i>STOCK BAJO - Minimo: {{ producto.stock_minimo }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span><i class="fas fa-calendar-times me-2"></i>Lotes y Fechas de Vencimiento</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Lote</th><th>Cantidad</th><th>Fecha Entrada</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for lote in lotes %}
+            <tr>
+              <td>{{ lote.numero_lote|default:lote.pk }}</td>
+              <td>{{ lote.cantidad }}</td>
+              <td>{{ lote.fecha_entrada }}</td>
+              <td>{{ lote.fecha_vencimiento|default:"Sin fecha" }}</td>
+              <td>
+                {% if lote.estado_vencimiento == 'vencido' %}<span class="badge bg-danger">VENCIDO</span>
+                {% elif lote.estado_vencimiento == 'critico' %}<span class="badge bg-warning text-dark">{{ lote.dias_para_vencer }} dias</span>
+                {% elif lote.estado_vencimiento == 'proximo' %}<span class="badge bg-info">{{ lote.dias_para_vencer }} dias</span>
+                {% elif lote.estado_vencimiento == 'vigente' %}<span class="badge bg-success">Vigente</span>
+                {% else %}<span class="badge bg-light text-dark">Sin fecha</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted">No hay lotes registrados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="fas fa-history me-2"></i>Ultimos Movimientos</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Tipo</th><th>Cantidad</th><th>Stock Ant.</th><th>Stock Nuevo</th><th>Motivo</th><th>Fecha</th></tr></thead>
+          <tbody>
+            {% for m in movimientos %}
+            <tr>
+              <td><span class="badge {% if m.tipo == 'entrada' %}bg-success{% elif m.tipo == 'salida' %}bg-danger{% else %}bg-secondary{% endif %}">{{ m.get_tipo_display }}</span></td>
+              <td>{{ m.cantidad }}</td>
+              <td>{{ m.stock_anterior }}</td>
+              <td>{{ m.stock_nuevo }}</td>
+              <td><small>{{ m.motivo }}</small></td>
+              <td><small class="text-muted">{{ m.fecha|date:"d/m/Y H:i" }}</small></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted">Sin movimientos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

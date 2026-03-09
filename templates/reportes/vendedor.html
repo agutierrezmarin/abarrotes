@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Mis Ventas{% endblock %}
+{% block page_title %}Mis Ventas del Dia{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card" style="background: linear-gradient(135deg,#1a6b3c,#2d9e5f)">
+      <div class="stat-value">Bs. {{ total_hoy|floatformat:2 }}</div>
+      <div class="stat-label">Total vendido hoy</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="background: linear-gradient(135deg,#3b82f6,#1d4ed8)">
+      <div class="stat-value">{{ num_ventas }}</div>
+      <div class="stat-label">Tickets hoy</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="background: linear-gradient(135deg,#7c3aed,#5b21b6)">
+      <div class="stat-value">Bs. {{ promedio|floatformat:2 }}</div>
+      <div class="stat-label">Promedio por ticket</div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header"><i class="fas fa-list me-2"></i>Ventas del {{ fecha }}</div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Ticket</th><th>Articulos</th><th>Total</th><th>Metodo</th><th>Hora</th><th></th></tr></thead>
+      <tbody>
+        {% for v in ventas_hoy %}
+        <tr>
+          <td>#{{ v.numero_ticket }}</td>
+          <td>{{ v.items.count }}</td>
+          <td class="fw-bold">Bs. {{ v.total|floatformat:2 }}</td>
+          <td>{{ v.get_metodo_pago_display }}</td>
+          <td>{{ v.fecha_venta|date:"H:i" }}</td>
+          <td><a href="/ventas/ticket/{{ v.pk }}/" class="btn btn-sm btn-outline-primary">Ver</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Sin ventas hoy.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

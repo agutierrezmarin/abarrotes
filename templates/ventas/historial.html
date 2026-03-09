@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Historial de Ventas{% endblock %}
+{% block page_title %}Historial de Ventas{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Ticket</th><th>Vendedor</th><th>Articulos</th><th>Total</th><th>Pago</th><th>Fecha</th><th></th></tr></thead>
+      <tbody>
+        {% for v in ventas %}
+        <tr>
+          <td class="fw-semibold">#{{ v.numero_ticket }}</td>
+          <td>{{ v.vendedor.get_full_name|default:v.vendedor.username }}</td>
+          <td>{{ v.items.count }} art.</td>
+          <td class="fw-bold text-success">Bs. {{ v.total|floatformat:2 }}</td>
+          <td><span class="badge bg-light text-dark">{{ v.get_metodo_pago_display }}</span></td>
+          <td><small>{{ v.fecha_venta|date:"d/m/Y H:i" }}</small></td>
+          <td><a href="/ventas/ticket/{{ v.pk }}/" class="btn btn-sm btn-outline-primary">Ver ticket</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No hay ventas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

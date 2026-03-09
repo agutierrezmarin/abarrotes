@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Punto de Venta{% endblock %}
+{% block page_title %}Punto de Venta - Ticket #{{ venta.numero_ticket }}{% endblock %}
+{% block extra_css %}
+<style>
+.pv-panel { height: calc(100vh - 140px); display: flex; flex-direction: column; }
+.buscar-section { background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+.productos-lista { flex: 1; overflow-y: auto; background: #fff; border-radius: 12px; padding: 0.5rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+.prod-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; margin-bottom: 4px; transition: all .15s; }
+.prod-item:hover { background: #f0fdf4; border-color: #1a6b3c; }
+.ticket-panel { background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); display: flex; flex-direction: column; height: calc(100vh - 140px); }
+.ticket-items { flex: 1; overflow-y: auto; }
+.ticket-footer { border-top: 2px solid #e2e8f0; padding-top: 1rem; }
+.total-display { font-size: 2rem; font-weight: 800; color: #1a6b3c; }
+.modal-overlay { display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center; }
+.modal-overlay.show { display: flex; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="row g-3" style="height: calc(100vh - 140px);">
+  <!-- Panel izquierdo: busqueda de productos -->
+  <div class="col-md-7 d-flex flex-column">
+    <div class="buscar-section">
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+        <input type="text" id="buscar-input" class="form-control form-control-lg border-start-0" 
+               placeholder="Buscar producto por nombre o codigo..." autofocus>
+      </div>
+    </div>
+    <div class="productos-lista" id="resultados-productos">
+      <div class="text-center text-muted py-5">
+        <i class="fas fa-search fa-2x mb-2 d-block opacity-25"></i>
+        Escribe para buscar productos...
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: ticket -->
+  <div class="col-md-5">
+    <div class="ticket-panel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0"><i class="fas fa-receipt me-2"></i>Ticket #{{ venta.numero_ticket }}</h6>
+        <span class="badge bg-warning text-dark">En proceso</span>
+      </div>
+      <div class="ticket-items">
+        {% for item in items %}
+        <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ item.producto.nombre }}</div>
+            <div class="text-muted" style="font-size:.75rem">Bs. {{ item.precio_unitario|floatformat:2 }} x {{ item.cantidad }} = <strong>Bs. {{ item.subtotal|floatformat:2 }}</strong></div>
+          </div>
+          <a href="/ventas/quitar/{{ item.pk }}/" class="btn btn-sm btn-outline-danger py-0 px-2">&times;</a>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-shopping-cart fa-2x mb-2 d-block opacity-25"></i>
+          Ticket vacio
+        </div>
+        {% endfor %}
+      </div>
+      <div class="ticket-footer">
+        <div class="d-flex justify-content-between mb-1">
+          <span class="text-muted">Subtotal:</span>
+          <span>Bs. {{ venta.subtotal|default:"0.00"|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="fw-bold">TOTAL:</span>
+          <span class="total-display">Bs. {{ venta.total|default:"0.00"|floatformat:2 }}</span>
+        </div>
+        {% if items %}
+        <button class="btn btn-success w-100 fw-bold" onclick="document.getElementById('modal-pago').classList.add('show')">
+          <i class="fas fa-cash-register me-2"></i>COBRAR
+        </button>
+        {% else %}
+        <button class="btn btn-success w-100 fw-bold" disabled>
+          <i class="fas fa-cash-register me-2"></i>COBRAR
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de pago -->
+<div class="modal-overlay" id="modal-pago">
+  <div class="bg-white rounded-3 p-4" style="width:380px">
+    <h5 class="fw-bold mb-3"><i class="fas fa-cash-register me-2"></i>Completar Venta</h5>
+    <div class="alert alert-success mb-3">Total a cobrar: <strong class="fs-4">Bs. {{ venta.total|default:"0.00"|floatformat:2 }}</strong></div>
+    <form method="post" action="/ventas/completar/">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Metodo de Pago</label>
+        <select name="metodo_pago" class="form-select">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="fiado">Fiado</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Monto Recibido</label>
+        <input type="number" name="monto_recibido" class="form-control form-control-lg text-end" 
+               step="0.01" min="0" value="{{ venta.total|default:0 }}" id="monto-input">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Descuento ($)</label>
+        <input type="number" name="descuento" class="form-control" step="0.01" min="0" value="0">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success fw-bold flex-grow-1"><i class="fas fa-check me-1"></i>Confirmar Venta</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('modal-pago').classList.remove('show')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal cantidad -->
+<div class="modal-overlay" id="modal-cantidad">
+  <div class="bg-white rounded-3 p-4" style="width:320px">
+    <h6 class="fw-bold mb-3" id="modal-prod-nombre">Agregar Producto</h6>
+    <form method="post" action="/ventas/agregar/">
+      {% csrf_token %}
+      <input type="hidden" name="producto_id" id="modal-prod-id">
+      <div class="mb-3">
+        <label class="form-label">Cantidad</label>
+        <input type="number" name="cantidad" class="form-control form-control-lg text-center" min="1" value="1" id="modal-cantidad-input">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-plus me-1"></i>Agregar</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('modal-cantidad').classList.remove('show')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let timer;
+document.getElementById('buscar-input').addEventListener('input', function() {
+  clearTimeout(timer);
+  const q = this.value.trim();
+  if (!q) {
+    document.getElementById('resultados-productos').innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-search fa-2x mb-2 d-block opacity-25"></i>Escribe para buscar productos...</div>';
+    return;
+  }
+  timer = setTimeout(() => buscar(q), 300);
+});
+
+async function buscar(q) {
+  const res = await fetch(`/ventas/buscar/?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  const cont = document.getElementById('resultados-productos');
+  if (!data.productos.length) {
+    cont.innerHTML = '<div class="text-center text-muted py-4">No se encontraron productos.</div>';
+    return;
+  }
+  cont.innerHTML = data.productos.map(p => `
+    <div class="prod-item" onclick="seleccionarProducto(${p.id}, '${p.nombre.replace(/'/g,"\\'")}', ${p.precio})">
+      <div>
+        <div class="fw-semibold">${p.nombre}</div>
+        <small class="text-muted">Stock: ${p.stock} ${p.unidad}</small>
+      </div>
+      <div class="text-end">
+        <div class="fw-bold text-success">Bs. ${p.precio}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function seleccionarProducto(id, nombre, precio) {
+  document.getElementById('modal-prod-id').value = id;
+  document.getElementById('modal-prod-nombre').textContent = nombre + ' - Bs. ' + precio;
+  document.getElementById('modal-cantidad-input').value = 1;
+  document.getElementById('modal-cantidad').classList.add('show');
+  document.getElementById('modal-cantidad-input').focus();
+  document.getElementById('modal-cantidad-input').select();
+}
+</script>
+{% endblock %}

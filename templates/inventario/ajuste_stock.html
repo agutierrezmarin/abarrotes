@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Ajustar Stock{% endblock %}
+{% block page_title %}Ajustar Stock - {{ producto.nombre }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-sliders-h me-2"></i>Ajuste de Stock</div>
+      <div class="card-body">
+        <div class="alert alert-info mb-3">Stock actual: <strong>{{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}</strong></div>
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-warning fw-semibold">Aplicar Ajuste</button>
+            <a href="/inventario/productos/{{ producto.pk }}/" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>select,input,textarea{width:100%;padding:.5rem .75rem;border:1px solid #e2e8f0;border-radius:8px;}</style>
+{% endblock %}

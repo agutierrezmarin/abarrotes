@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-user-edit me-2"></i>{{ titulo }}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.username.label }} *</label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.first_name.label }}</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.last_name.label }}</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label fw-semibold small">{{ form.grupo.label }} *</label>
+              {{ form.grupo }}
+              {% if form.grupo.errors %}<div class="text-danger small mt-1">{{ form.grupo.errors.0 }}</div>{% endif %}
+            </div>
+
+            {% if form.password1 %}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.password1.label }} *</label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}<div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.password2.label }} *</label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}<div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if form.password_nueva %}
+            <div class="col-md-12">
+              <label class="form-label fw-semibold small">{{ form.password_nueva.label }}</label>
+              {{ form.password_nueva }}
+              {% if form.password_nueva.errors %}<div class="text-danger small mt-1">{{ form.password_nueva.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 d-flex align-items-center gap-2">
+              {{ form.is_active }}
+              <label class="form-label fw-semibold small mb-0">{{ form.is_active.label }}</label>
+              {% if form.is_active.errors %}<div class="text-danger small mt-1">{{ form.is_active.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="col-12">
+              <div class="alert alert-danger py-2">{{ form.non_field_errors.0 }}</div>
+            </div>
+            {% endif %}
+
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i>Guardar
+            </button>
+            <a href="{% url 'usuarios:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .card-body input[type="text"],
+  .card-body input[type="email"],
+  .card-body input[type="password"],
+  .card-body select {
+    width: 100%; padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+  }
+  .card-body input:focus, .card-body select:focus {
+    border-color: #1a6b3c; outline: none; box-shadow: 0 0 0 3px rgba(26,107,60,.1);
+  }
+</style>
+{% endblock %}

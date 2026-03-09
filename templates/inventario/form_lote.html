@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Agregar Lote{% endblock %}
+{% block page_title %}Agregar Lote - {{ producto.nombre }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-plus-circle me-2"></i>Nuevo Lote de Entrada</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Registrar Lote</button>
+            <a href="/inventario/productos/{{ producto.pk }}/" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>input,select,textarea{width:100%;padding:.5rem .75rem;border:1px solid #e2e8f0;border-radius:8px;}</style>
+{% endblock %}

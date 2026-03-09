@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Reporte Administrador{% endblock %}
+{% block page_title %}Reporte de Administrador{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <div class="text-muted small mb-1">HOY</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#1a6b3c">Bs. {{ resumen_hoy.total|floatformat:2 }}</div>
+      <div class="text-muted small">{{ resumen_hoy.ventas }} ventas</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <div class="text-muted small mb-1">ESTA SEMANA</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#3b82f6">Bs. {{ resumen_semana.total|floatformat:2 }}</div>
+      <div class="text-muted small">{{ resumen_semana.ventas }} ventas</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <div class="text-muted small mb-1">ESTE MES</div>
+      <div style="font-size:1.8rem;font-weight:800;color:#7c3aed">Bs. {{ resumen_mes.total|floatformat:2 }}</div>
+      <div class="text-muted small">{{ resumen_mes.ventas }} ventas</div>
+    </div></div>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-trophy text-warning me-2"></i>Top Productos del Mes</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Producto</th><th>Vendidos</th><th>Ingresos</th></tr></thead>
+          <tbody>
+            {% for p in top_productos %}
+            <tr>
+              <td><span class="badge bg-warning text-dark">{{ forloop.counter }}</span></td>
+              <td>{{ p.producto__nombre }}</td>
+              <td>{{ p.total_vendido }}</td>
+              <td class="fw-semibold">Bs. {{ p.ingresos|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted">Sin datos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header text-danger"><i class="fas fa-exclamation-circle me-2"></i>Stock Bajo ({{ productos_stock_bajo.count }})</div>
+      <div class="table-responsive" style="max-height:200px;overflow-y:auto">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Producto</th><th>Stock</th><th>Minimo</th></tr></thead>
+          <tbody>
+            {% for p in productos_stock_bajo %}
+            <tr><td>{{ p.nombre }}</td><td class="text-danger fw-bold">{{ p.stock_actual }}</td><td>{{ p.stock_minimo }}</td></tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-success">Sin alertas de stock.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header text-warning"><i class="fas fa-calendar-times me-2"></i>Proximos a Vencer (30 dias)</div>
+      <div class="table-responsive" style="max-height:200px;overflow-y:auto">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Producto</th><th>Lote</th><th>Vence</th></tr></thead>
+          <tbody>
+            {% for l in lotes_alerta %}
+            <tr><td>{{ l.producto.nombre }}</td><td>{{ l.numero_lote|default:l.pk }}</td>
+            <td><span class="badge {% if l.dias_para_vencer <= 7 %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ l.fecha_vencimiento }}</span></td></tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-success">Sin alertas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Inventario{% endblock %}
+{% block page_title %}Dashboard de Inventario{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="background: linear-gradient(135deg,#1a6b3c,#2d9e5f)">
+      <div class="stat-value">{{ total_productos }}</div>
+      <div class="stat-label"><i class="fas fa-boxes me-1"></i>Total Productos</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background: linear-gradient(135deg,#f59e0b,#d97706)">
+      <div class="stat-value">{{ productos_stock_bajo }}</div>
+      <div class="stat-label"><i class="fas fa-exclamation-circle me-1"></i>Stock Bajo</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background: linear-gradient(135deg,#dc2626,#b91c1c)">
+      <div class="stat-value">{{ lotes_vencidos }}</div>
+      <div class="stat-label"><i class="fas fa-times-circle me-1"></i>Lotes Vencidos</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background: linear-gradient(135deg,#7c3aed,#6d28d9)">
+      <div class="stat-value">{{ lotes_por_vencer }}</div>
+      <div class="stat-label"><i class="fas fa-clock me-1"></i>Por Vencer (7 dias)</div>
+    </div>
+  </div>
+</div>
+
+{% if alertas %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-bell text-warning me-2"></i>Alertas Activas</span>
+    <a href="/inventario/alertas/" class="btn btn-sm btn-outline-warning">Ver todas</a>
+  </div>
+  <div class="card-body p-0">
+    {% for alerta in alertas %}
+    <div class="d-flex align-items-center px-4 py-2 border-bottom
+      {% if alerta.nivel == 'critical' %}bg-danger bg-opacity-10
+      {% elif alerta.nivel == 'danger' %}bg-warning bg-opacity-10
+      {% else %}bg-warning bg-opacity-5{% endif %}">
+      {% if alerta.nivel == 'critical' %}
+        <i class="fas fa-skull-crossbones text-danger me-2"></i>
+      {% elif alerta.nivel == 'danger' %}
+        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+      {% else %}
+        <i class="fas fa-info-circle text-info me-2"></i>
+      {% endif %}
+      <small>{{ alerta.mensaje }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-history me-2"></i>Productos Actualizados Recientemente</span>
+    <a href="/inventario/productos/" class="btn btn-sm btn-primary">Ver todos</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Producto</th><th>Categoria</th><th>Stock</th><th>Precio Venta</th><th></th></tr></thead>
+      <tbody>
+        {% for p in productos_recientes %}
+        <tr>
+          <td class="fw-semibold">{{ p.nombre }}</td>
+          <td><span class="badge bg-light text-dark">{{ p.categoria }}</span></td>
+          <td>
+            {% if p.stock_bajo %}
+              <span class="badge bg-danger">{{ p.stock_actual }} {{ p.get_unidad_medida_display }}</span>
+            {% else %}
+              <span class="badge bg-success">{{ p.stock_actual }} {{ p.get_unidad_medida_display }}</span>
+            {% endif %}
+          </td>
+          <td>Bs. {{ p.precio_venta|floatformat:2 }}</td>
+          <td><a href="/inventario/productos/{{ p.pk }}/" class="btn btn-sm btn-outline-primary">Ver</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

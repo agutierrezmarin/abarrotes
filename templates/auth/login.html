@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciar Sesion - Abarrotes</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(135deg, #1a6b3c 0%, #124d2b 100%); min-height: 100vh; display:flex; align-items:center; }
+    .login-card { border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; }
+    .login-header { background: #1a6b3c; color: white; padding: 2rem; text-align: center; border-radius: 16px 16px 0 0; }
+    .form-control:focus { border-color: #1a6b3c; box-shadow: 0 0 0 0.2rem rgba(26,107,60,0.25); }
+    .btn-login { background: #1a6b3c; border: none; padding: 0.75rem; font-size: 1rem; }
+    .btn-login:hover { background: #124d2b; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="login-card card">
+        <div class="login-header">
+          <div style="font-size:3rem">&#x1F6D2;</div>
+          <h3 class="fw-bold mt-2">Tienda de Abarrotes</h3>
+          <p class="mb-0 opacity-75">Sistema de Inventario y Ventas</p>
+        </div>
+        <div class="card-body p-4">
+          {% if form.errors %}
+            <div class="alert alert-danger">Usuario o contrasena incorrectos.</div>
+          {% endif %}
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Usuario</label>
+              <input type="text" name="username" class="form-control form-control-lg" autofocus required>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Contrasena</label>
+              <input type="password" name="password" class="form-control form-control-lg" required>
+            </div>
+            <button type="submit" class="btn btn-login btn-primary w-100 rounded-pill">
+              Iniciar Sesion
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

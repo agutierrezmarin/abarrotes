@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ usuarios.count }} usuario(s) registrado(s)</span>
+  <a href="{% url 'usuarios:crear' %}" class="btn btn-success">
+    <i class="fas fa-user-plus me-1"></i>Nuevo Usuario
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre completo</th>
+          <th>Correo</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Superusuario</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr class="{% if not u.is_active %}opacity-50{% endif %}">
+          <td class="fw-semibold">
+            <i class="fas fa-user-circle text-muted me-1"></i>{{ u.username }}
+          </td>
+          <td>{{ u.get_full_name|default:"—" }}</td>
+          <td><small class="text-muted">{{ u.email|default:"—" }}</small></td>
+          <td>
+            {% for g in u.groups.all %}
+              <span class="badge bg-success">{{ g.name }}</span>
+            {% empty %}
+              {% if u.is_superuser %}
+                <span class="badge bg-danger">Superusuario</span>
+              {% else %}
+                <span class="badge bg-secondary">Sin rol</span>
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success"><i class="fas fa-check me-1"></i>Activo</span>
+            {% else %}
+              <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Inactivo</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_superuser %}
+              <i class="fas fa-shield-alt text-danger" title="Superusuario"></i>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'usuarios:editar' u.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit"></i>
+              </a>
+              {% if u != request.user %}
+              <form method="post" action="{% url 'usuarios:toggle' u.pk %}" style="margin:0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                        title="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+                  <i class="fas {% if u.is_active %}fa-user-slash{% else %}fa-user-check{% endif %}"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
