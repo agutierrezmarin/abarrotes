@@ -3,25 +3,25 @@
 {% block page_title %}Dashboard de Inventario{% endblock %}
 {% block content %}
 <div class="row g-3 mb-4">
-  <div class="col-md-3">
+  <div class="col-6 col-md-3">
     <div class="stat-card" style="background: linear-gradient(135deg,#1a6b3c,#2d9e5f)">
       <div class="stat-value">{{ total_productos }}</div>
       <div class="stat-label"><i class="fas fa-boxes me-1"></i>Total Productos</div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md-3">
     <div class="stat-card" style="background: linear-gradient(135deg,#f59e0b,#d97706)">
       <div class="stat-value">{{ productos_stock_bajo }}</div>
       <div class="stat-label"><i class="fas fa-exclamation-circle me-1"></i>Stock Bajo</div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md-3">
     <div class="stat-card" style="background: linear-gradient(135deg,#dc2626,#b91c1c)">
       <div class="stat-value">{{ lotes_vencidos }}</div>
       <div class="stat-label"><i class="fas fa-times-circle me-1"></i>Lotes Vencidos</div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md-3">
     <div class="stat-card" style="background: linear-gradient(135deg,#7c3aed,#6d28d9)">
       <div class="stat-value">{{ lotes_por_vencer }}</div>
       <div class="stat-label"><i class="fas fa-clock me-1"></i>Por Vencer (7 dias)</div>

@@ -1,39 +1,839 @@
 {% extends "base.html" %}
 {% block title %}{{ titulo }}{% endblock %}
 {% block page_title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Wizard steps ── */
+.wizard-steps { display: flex; align-items: center; gap: 0; margin-bottom: 2rem; overflow-x: auto; }
+.w-step {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .9rem; border-radius: 30px; font-size: .82rem;
+  font-weight: 600; white-space: nowrap; cursor: pointer;
+  border: 2px solid #e2e8f0; background: #fff; color: #94a3b8;
+  transition: all .2s;
+}
+.w-step.active { border-color: var(--primary,#1a6b3c); background: var(--primary,#1a6b3c); color: #fff; }
+.w-step.done  { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+.w-step .step-num {
+  width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; background: rgba(0,0,0,.1); flex-shrink: 0;
+}
+.w-step.active .step-num { background: rgba(255,255,255,.3); }
+.w-step.done  .step-num { background: #22c55e; color: #fff; }
+.w-sep { flex: 1; height: 2px; background: #e2e8f0; min-width: 16px; }
+.w-sep.done { background: #22c55e; }
+
+/* ── Wizard panels ── */
+.wizard-panel { display: none; }
+.wizard-panel.show { display: block; }
+
+/* ── Type cards ── */
+.type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 1rem; }
+.type-card {
+  border: 2px solid #e2e8f0; border-radius: 14px; padding: 1.25rem 1rem;
+  cursor: pointer; text-align: center; transition: all .2s; background: #fff;
+  position: relative;
+}
+.type-card:hover { border-color: var(--primary,#1a6b3c); background: #f0fdf4; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.type-card.selected { border-color: var(--primary,#1a6b3c); background: #f0fdf4; box-shadow: 0 0 0 3px rgba(26,107,60,.15); }
+.type-card .type-icon { font-size: 2.2rem; margin-bottom: .5rem; display: block; }
+.type-card h6 { font-size: .9rem; font-weight: 700; margin-bottom: .25rem; color: #1e293b; }
+.type-card p { font-size: .75rem; color: #64748b; margin: 0; line-height: 1.4; }
+.type-card .check-badge {
+  position: absolute; top: .5rem; right: .5rem;
+  background: var(--primary,#1a6b3c); color: #fff; border-radius: 50%;
+  width: 20px; height: 20px; display: none; align-items: center; justify-content: center; font-size: .7rem;
+}
+.type-card.selected .check-badge { display: flex; }
+
+/* ── Fields ── */
+.field-wrap { margin-bottom: 1.1rem; }
+.field-wrap .form-label { font-weight: 600; font-size: .82rem; margin-bottom: .3rem; color: #334155; }
+.field-wrap input, .field-wrap select, .field-wrap textarea {
+  border-radius: 8px; border: 1.5px solid #e2e8f0; width: 100%;
+  padding: .5rem .75rem; font-size: .9rem; background: #fff; transition: border-color .2s;
+}
+.field-wrap input:focus, .field-wrap select:focus, .field-wrap textarea:focus {
+  border-color: var(--primary,#1a6b3c); outline: none; box-shadow: 0 0 0 3px rgba(26,107,60,.1);
+}
+input[type="checkbox"] { width: auto !important; }
+.field-wrap .form-text { font-size: .75rem; color: #64748b; margin-top: .25rem; }
+.field-required { color: #ef4444; margin-left: 2px; }
+.field-error { color: #ef4444; font-size: .75rem; margin-top: .25rem; }
+
+/* ── Help tooltip ── */
+.help-icon { color: #94a3b8; cursor: pointer; margin-left: 4px; font-size: .8rem; }
+.help-icon:hover { color: var(--primary,#1a6b3c); }
+[data-bs-toggle="tooltip"] { cursor: help; }
+
+/* ── Margin indicator ── */
+.margin-bar-wrap { height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-top: .4rem; }
+.margin-bar { height: 100%; border-radius: 3px; transition: width .4s, background .4s; }
+.margin-label { font-size: .72rem; font-weight: 600; margin-top: .2rem; }
+
+/* ── Preview card ── */
+.preview-card { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 1rem; }
+.preview-card.has-data { background: #f0fdf4; border-color: #86efac; }
+.preview-row { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; border-bottom: 1px dashed #e2e8f0; font-size: .82rem; }
+.preview-row:last-child { border-bottom: none; }
+
+/* ── Section title ── */
+.section-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; font-weight: 700; margin-bottom: .75rem; }
+
+/* ── Suggestion chips ── */
+.chip-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+.chip { font-size: .72rem; padding: .2rem .65rem; border-radius: 20px; background: #f1f5f9; color: #475569; cursor: pointer; border: 1px solid #e2e8f0; transition: all .15s; }
+.chip:hover { background: var(--primary,#1a6b3c); color: #fff; border-color: var(--primary); }
+
+/* ── Nav buttons ── */
+.wizard-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f4f8; }
+
+/* ── Summary list ── */
+.summary-item { display: flex; align-items: flex-start; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid #f1f5f9; }
+.summary-item:last-child { border-bottom: none; }
+.summary-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary,#1a6b3c); margin-top: 5px; flex-shrink: 0; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header"><i class="fas fa-box me-2"></i>{{ titulo }}</div>
-      <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          <div class="row g-3">
-            {% for field in form %}
-            <div class="col-md-{% if field.name == 'descripcion' or field.name == 'imagen' %}12{% else %}6{% endif %}">
-              <label class="form-label fw-semibold small">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-              {{ field }}
-              {% if field.errors %}<div class="text-danger small">{{ field.errors.0 }}</div>{% endif %}
-            </div>
-            {% endfor %}
-          </div>
-          <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Guardar</button>
-            <a href="/inventario/productos/" class="btn btn-outline-secondary">Cancelar</a>
-          </div>
-        </form>
+  <div class="col-12 col-lg-8">
+
+    <!-- Wizard steps -->
+    <div class="wizard-steps mb-4" id="wizard-steps">
+      <div class="w-step active" id="s1" onclick="irPaso(1)">
+        <span class="step-num" id="sn1">1</span> Tipo de Producto
+      </div>
+      <div class="w-sep" id="sep1"></div>
+      <div class="w-step" id="s2" onclick="irPaso(2)">
+        <span class="step-num" id="sn2">2</span> Información
+      </div>
+      <div class="w-sep" id="sep2"></div>
+      <div class="w-step" id="s3" onclick="irPaso(3)">
+        <span class="step-num" id="sn3">3</span> Precios
+      </div>
+      <div class="w-sep" id="sep3"></div>
+      <div class="w-step" id="s4" onclick="irPaso(4)">
+        <span class="step-num" id="sn4">4</span> Stock
+      </div>
+      <div class="w-sep" id="sep4"></div>
+      <div class="w-step" id="s5" onclick="irPaso(5)">
+        <span class="step-num" id="sn5">5</span> Resumen
       </div>
     </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate id="form-producto">
+      {% csrf_token %}
+
+      <!-- ══ PASO 1: Tipo de producto ══ -->
+      <div class="wizard-panel show" id="panel-1">
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-success rounded-circle" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center">1</span>
+            ¿Qué tipo de producto vas a registrar?
+          </div>
+          <div class="card-body">
+            <p class="text-muted small mb-3">Selecciona el tipo para configurar automáticamente los campos necesarios.</p>
+            <div class="type-cards">
+              <div class="type-card" id="tc-simple" onclick="seleccionarTipo('simple')">
+                <div class="check-badge"><i class="fas fa-check"></i></div>
+                <span class="type-icon">🧃</span>
+                <h6>Producto Simple</h6>
+                <p>Se compra y vende por unidad, pieza o presentación única.<br><em>Ej: Refresco 600ml, Jabón, Aceite 1L</em></p>
+              </div>
+              <div class="type-card" id="tc-fraccionado" onclick="seleccionarTipo('fraccionado')">
+                <div class="check-badge"><i class="fas fa-check"></i></div>
+                <span class="type-icon">📦</span>
+                <h6>Compra por Caja / Vende por Unidad</h6>
+                <p>Se compra en caja/paquete pero se vende individualmente o también en caja.<br><em>Ej: Cerveza, Chicles, Bolsas de frituras</em></p>
+              </div>
+              <div class="type-card" id="tc-granel" onclick="seleccionarTipo('granel')">
+                <div class="check-badge"><i class="fas fa-check"></i></div>
+                <span class="type-icon">⚖️</span>
+                <h6>A Granel / Por Peso</h6>
+                <p>Se compra por kilogramo o litro y se vende fraccionado.<br><em>Ej: Frijol, Arroz, Azúcar, Aceite a granel</em></p>
+              </div>
+              <div class="type-card" id="tc-servicio" onclick="seleccionarTipo('servicio')">
+                <div class="check-badge"><i class="fas fa-check"></i></div>
+                <span class="type-icon">🔧</span>
+                <h6>Otros / Servicio</h6>
+                <p>Producto con configuración especial o servicio que se cobra como ítem.<br><em>Ej: Bolsa de regalo, Servicio entrega</em></p>
+              </div>
+            </div>
+            <div class="wizard-nav">
+              <span></span>
+              <button type="button" class="btn btn-primary" onclick="irPaso(2)" id="btn-paso1-next" disabled>
+                Continuar <i class="fas fa-arrow-right ms-1"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tip contextual -->
+        <div id="tip-tipo" class="alert alert-info py-2 small" style="display:none">
+          <i class="fas fa-lightbulb me-1"></i>
+          <span id="tip-tipo-texto"></span>
+        </div>
+      </div>
+
+      <!-- ══ PASO 2: Información básica ══ -->
+      <div class="wizard-panel" id="panel-2">
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-success rounded-circle" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center">2</span>
+            Información del Producto
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Nombre del producto <span class="field-required">*</span>
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Escribe el nombre tal como aparecerá en el ticket de venta. Incluye la marca si es relevante. Ej: 'Coca-Cola 600ml' en lugar de solo 'Refresco'."></i>
+                  </label>
+                  {{ form.nombre }}
+                  <div class="chip-list" id="chips-nombre" style="display:none">
+                    <span class="text-muted" style="font-size:.72rem">Sugerencias rápidas:</span>
+                  </div>
+                  {% if form.nombre.errors %}<div class="field-error">{{ form.nombre.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Código de barras
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Escanea o escribe el código de barras del producto. Facilita la búsqueda en el punto de venta. Déjalo vacío si el producto no tiene código."></i>
+                  </label>
+                  {{ form.codigo_barras }}
+                  <div class="form-text">Opcional. Permite búsqueda por escaneo.</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Categoría
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Agrupa el producto por categoría para facilitar reportes y búsquedas. Puedes crear categorías desde el panel de administración."></i>
+                  </label>
+                  {{ form.categoria }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Proveedor
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Indica quién suministra este producto. Útil para contactar al proveedor cuando el stock esté bajo."></i>
+                  </label>
+                  {{ form.proveedor }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Unidad de medida
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cómo se vende la unidad individual? Pieza = artículo físico (botella, jabón), Kilogramo = peso, Litro = volumen."></i>
+                  </label>
+                  {{ form.unidad_medida }}
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="field-wrap">
+                  <label class="form-label">Descripción</label>
+                  {{ form.descripcion }}
+                  <div class="form-text">Opcional. Detalles adicionales (sabor, presentación, etc.)</div>
+                </div>
+              </div>
+              <div class="col-md-8">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Imagen del producto
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Foto del producto. Aparecerá en el inventario para identificarlo visualmente. Formatos: JPG, PNG."></i>
+                  </label>
+                  {{ form.imagen }}
+                  <div class="form-text">Opcional. Máximo recomendado: 2 MB.</div>
+                </div>
+              </div>
+              <div class="col-md-4 d-flex align-items-center gap-2 pt-3">
+                {{ form.activo }}
+                <label class="form-label mb-0">
+                  Producto activo
+                  <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                     title="Un producto inactivo no aparece en el punto de venta. Úsalo para productos descontinuados."></i>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button type="button" class="btn btn-outline-secondary" onclick="irPaso(1)"><i class="fas fa-arrow-left me-1"></i>Atrás</button>
+          <button type="button" class="btn btn-primary" onclick="irPaso(3)">Continuar <i class="fas fa-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+
+      <!-- ══ PASO 3: Precios ══ -->
+      <div class="wizard-panel" id="panel-3">
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-success rounded-circle" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center">3</span>
+            Precios y Margen de Ganancia
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Precio de compra -->
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label" id="lbl-precio-compra">
+                    Precio de compra (Bs.) <span class="field-required">*</span>
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cuánto te costó comprar el producto? Si es fraccionado, es el costo de la caja/paquete completo."></i>
+                  </label>
+                  {{ form.precio_compra }}
+                  <div class="form-text" id="txt-precio-compra">Lo que pagas al proveedor.</div>
+                  {% if form.precio_compra.errors %}<div class="field-error">{{ form.precio_compra.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+              <!-- Precio de venta -->
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Precio de venta por unidad (Bs.) <span class="field-required">*</span>
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Precio al que vendes cada unidad individual al cliente."></i>
+                  </label>
+                  {{ form.precio_venta }}
+                  <div class="form-text">Lo que cobra el cliente por 1 unidad.</div>
+                  {% if form.precio_venta.errors %}<div class="field-error">{{ form.precio_venta.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+
+              <!-- Sugerencia de margen -->
+              <div class="col-12" id="sugerencia-margen" style="display:none">
+                <div class="p-3 rounded" style="background:#f8fafc;border:1.5px solid #e2e8f0">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="section-title mb-0">Margen de ganancia estimado</span>
+                    <span class="fw-bold" id="margen-pct" style="font-size:1.1rem">—</span>
+                  </div>
+                  <div class="margin-bar-wrap">
+                    <div class="margin-bar" id="margen-bar" style="width:0%"></div>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span class="margin-label" id="margen-texto" style="color:#64748b"></span>
+                    <span class="margin-label text-muted">Ganancia por unidad: <strong id="ganancia-u">—</strong></span>
+                  </div>
+                  <div class="chip-list mt-2" id="chips-margen">
+                    <span class="text-muted" style="font-size:.72rem">Ajustar precio de venta con margen:</span>
+                    <span class="chip" onclick="aplicarMargen(10)">+10%</span>
+                    <span class="chip" onclick="aplicarMargen(15)">+15%</span>
+                    <span class="chip" onclick="aplicarMargen(20)">+20%</span>
+                    <span class="chip" onclick="aplicarMargen(30)">+30%</span>
+                    <span class="chip" onclick="aplicarMargen(50)">+50%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección fraccionado (solo si tipo = fraccionado) -->
+        <div class="card mb-3" id="card-fraccionado" style="display:none">
+          <div class="card-header d-flex align-items-center gap-2">
+            <i class="fas fa-cubes text-primary me-1"></i>
+            Configuración de Venta Fraccionada
+            <span class="badge bg-info ms-auto">Opcional</span>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info py-2 small mb-3">
+              <i class="fas fa-info-circle me-1"></i>
+              El <strong>precio de compra</strong> que ingresaste arriba es el costo de la <strong>caja/paquete completo</strong>.
+              Aquí configura cuántas unidades contiene y el precio si quieres vender la caja completa.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Unidades por caja/paquete <span class="field-required">*</span>
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cuántas piezas trae una caja? Ej: una caja de cerveza trae 24 botellas."></i>
+                  </label>
+                  {{ form.unidades_por_paquete }}
+                  <div class="form-text">Mín. 2 para activar el fraccionado.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Nombre del paquete
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cómo se llama el paquete mayor? Ej: Caja, Paquete, Cartón, Bolsa, Costal."></i>
+                  </label>
+                  {{ form.nombre_paquete }}
+                  <div class="chip-list mt-1">
+                    <span class="chip" onclick="setNombrePaq('Caja')">Caja</span>
+                    <span class="chip" onclick="setNombrePaq('Paquete')">Paquete</span>
+                    <span class="chip" onclick="setNombrePaq('Cartón')">Cartón</span>
+                    <span class="chip" onclick="setNombrePaq('Bolsa')">Bolsa</span>
+                    <span class="chip" onclick="setNombrePaq('Costal')">Costal</span>
+                    <span class="chip" onclick="setNombrePaq('Docena')">Docena</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Precio de venta por caja (Bs.)
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cuánto cobras si el cliente compra la caja/paquete completo? Déjalo vacío si no vendes por caja."></i>
+                  </label>
+                  {{ form.precio_venta_paquete }}
+                  <div class="form-text">Opcional. Si vendes cajas completas.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview fraccionado -->
+            <div class="preview-card mt-3" id="preview-fraccionado" style="display:none">
+              <div class="section-title"><i class="fas fa-eye me-1"></i>Vista previa en punto de venta</div>
+              <div class="preview-row">
+                <span class="text-muted">Costo de compra (caja)</span>
+                <strong id="pv-costo-caja">—</strong>
+              </div>
+              <div class="preview-row">
+                <span class="text-muted">Unidades por <span class="pv-npaq">caja</span></span>
+                <strong id="pv-upq">—</strong>
+              </div>
+              <div class="preview-row">
+                <span class="text-muted">Costo por unidad</span>
+                <span class="text-danger fw-semibold">Bs. <span id="pv-costo-u">—</span></span>
+              </div>
+              <div class="preview-row">
+                <span class="text-muted">Precio venta / unidad</span>
+                <span class="text-success fw-semibold">Bs. <span id="pv-venta-u">—</span></span>
+              </div>
+              <div class="preview-row" id="pv-row-caja" style="display:none">
+                <span class="text-muted">Precio venta / <span class="pv-npaq">caja</span></span>
+                <span class="text-primary fw-semibold">Bs. <span id="pv-venta-caja">—</span></span>
+              </div>
+              <div class="preview-row">
+                <span class="text-muted">Margen por unidad</span>
+                <strong id="pv-margen-u" class="text-success">—</strong>
+              </div>
+              <div class="preview-row" id="pv-row-mcaja" style="display:none">
+                <span class="text-muted">Margen por <span class="pv-npaq">caja</span></span>
+                <strong id="pv-margen-caja" class="text-primary">—</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button type="button" class="btn btn-outline-secondary" onclick="irPaso(2)"><i class="fas fa-arrow-left me-1"></i>Atrás</button>
+          <button type="button" class="btn btn-primary" onclick="irPaso(4)">Continuar <i class="fas fa-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+
+      <!-- ══ PASO 4: Stock ══ -->
+      <div class="wizard-panel" id="panel-4">
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-success rounded-circle" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center">4</span>
+            Control de Stock
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning py-2 small mb-3">
+              <i class="fas fa-warehouse me-1"></i>
+              El stock <strong>siempre se gestiona en unidades</strong> individuales.
+              <span id="stock-hint-fraccionado" style="display:none">Si tienes <span id="sh-n">0</span> cajas de <span id="sh-upq">24</span> unidades, ingresa <span id="sh-total">0</span> en stock inicial.</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Stock inicial (unidades)
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="¿Cuántas unidades tienes disponibles ahora mismo? Si el producto es nuevo y aún no ha llegado mercancía, puedes dejar 0 y registrar el lote más adelante."></i>
+                  </label>
+                  {{ form.stock_actual }}
+                  <div class="form-text">Puedes dejarlo en 0 y agregar mercancía vía "Agregar Lote" después.</div>
+                  <div id="stock-equivalente" class="mt-2 p-2 rounded" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;font-size:.78rem">
+                    <i class="fas fa-sync-alt text-primary me-1"></i>
+                    Equivale a <strong id="stock-eq-cajas">—</strong> <span class="pv-npaq">cajas</span> completas + <strong id="stock-eq-sueltas">—</strong> unidades sueltas.
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Stock mínimo (alerta)
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Cuando el stock baje de este número, el sistema mostrará una alerta en el dashboard para recordarte que debes reabastecerte."></i>
+                  </label>
+                  {{ form.stock_minimo }}
+                  <div class="form-text">El sistema te avisará cuando llegues a este nivel.</div>
+                  <div class="chip-list mt-1">
+                    <span class="text-muted" style="font-size:.72rem">Sugerencias:</span>
+                    <span class="chip" onclick="setStockMin(5)">5 uds</span>
+                    <span class="chip" onclick="setStockMin(10)">10 uds</span>
+                    <span class="chip" onclick="setStockMin(24)">24 uds</span>
+                    <span class="chip" onclick="setStockMin(48)">48 uds</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicador visual stock mínimo -->
+            <div id="stock-visual" class="mt-3 p-3 rounded" style="background:#f8fafc;border:1.5px solid #e2e8f0;display:none">
+              <div class="section-title"><i class="fas fa-chart-bar me-1"></i>Simulación de alerta</div>
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="text-center">
+                  <div class="fw-bold fs-4" id="sv-actual" style="color:#1a6b3c">—</div>
+                  <div class="small text-muted">Stock inicial</div>
+                </div>
+                <div class="text-muted"><i class="fas fa-arrow-right"></i></div>
+                <div class="text-center">
+                  <div class="fw-bold fs-4" id="sv-minimo" style="color:#f59e0b">—</div>
+                  <div class="small text-muted">Alerta al llegar a</div>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="small text-muted mb-1">Margen disponible antes de alerta:</div>
+                  <div class="progress" style="height:10px;border-radius:5px">
+                    <div class="progress-bar" id="sv-bar" style="width:0%;transition:width .4s"></div>
+                  </div>
+                  <div class="small mt-1" id="sv-texto"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button type="button" class="btn btn-outline-secondary" onclick="irPaso(3)"><i class="fas fa-arrow-left me-1"></i>Atrás</button>
+          <button type="button" class="btn btn-primary" onclick="irPaso(5)">Ver Resumen <i class="fas fa-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+
+      <!-- ══ PASO 5: Resumen ══ -->
+      <div class="wizard-panel" id="panel-5">
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-success rounded-circle" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center">5</span>
+            Resumen del Producto
+          </div>
+          <div class="card-body" id="resumen-body">
+            <p class="text-muted small">Revisa la información antes de guardar.</p>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button type="button" class="btn btn-outline-secondary" onclick="irPaso(4)"><i class="fas fa-arrow-left me-1"></i>Atrás</button>
+          <div class="d-flex gap-2">
+            <a href="/inventario/productos/" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-success fw-bold px-4">
+              <i class="fas fa-save me-1"></i>Guardar Producto
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </form>
   </div>
 </div>
 {% endblock %}
-{% block extra_css %}
-<style>
-  .card-body input, .card-body select, .card-body textarea { 
-    border-radius: 8px; border: 1px solid #e2e8f0; 
-    width: 100%; padding: 0.5rem 0.75rem;
+
+{% block extra_js %}
+<script>
+// ── Estado global ──
+let tipoProducto = null;
+let pasoActual = 1;
+const totalPasos = 5;
+
+// ── Wizard: navegación ──
+function irPaso(n) {
+  if (n < 1 || n > totalPasos) return;
+  document.querySelectorAll('.wizard-panel').forEach(p => p.classList.remove('show'));
+  document.getElementById('panel-' + n).classList.add('show');
+  pasoActual = n;
+  actualizarSteps();
+  if (n === 5) generarResumen();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function actualizarSteps() {
+  for (let i = 1; i <= totalPasos; i++) {
+    const s = document.getElementById('s' + i);
+    const sn = document.getElementById('sn' + i);
+    const sep = document.getElementById('sep' + i);
+    s.classList.remove('active', 'done');
+    if (i < pasoActual) {
+      s.classList.add('done');
+      sn.innerHTML = '<i class="fas fa-check" style="font-size:.65rem"></i>';
+      if (sep) sep.classList.add('done');
+    } else if (i === pasoActual) {
+      s.classList.add('active');
+      sn.textContent = i;
+      if (sep) sep.classList.remove('done');
+    } else {
+      sn.textContent = i;
+      if (sep) sep.classList.remove('done');
+    }
   }
-  .card-body input:focus, .card-body select:focus { border-color: #1a6b3c; outline: none; }
-</style>
+}
+
+// ── Tipo de producto ──
+const TIPS = {
+  simple: 'Ideal para productos con presentación única: botella, pieza, lata. Solo necesitas el precio de compra y venta por unidad.',
+  fraccionado: 'Perfecto para cervezas, chicles, frituras. Registra el costo por caja y el precio de cada unidad. También puedes vender la caja completa.',
+  granel: 'Para frijol, arroz, azúcar, etc. Usa "Kilogramo" como unidad de medida. El precio de venta es por kg.',
+  servicio: 'Para cobros especiales o servicios. Puedes omitir código de barras y proveedor.'
+};
+
+function seleccionarTipo(tipo) {
+  tipoProducto = tipo;
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('tc-' + tipo).classList.add('selected');
+  document.getElementById('btn-paso1-next').disabled = false;
+
+  const tip = document.getElementById('tip-tipo');
+  tip.style.display = '';
+  document.getElementById('tip-tipo-texto').textContent = TIPS[tipo];
+
+  // Configurar campos según tipo
+  const upqField = document.querySelector('[name="unidades_por_paquete"]');
+  const cardFrac = document.getElementById('card-fraccionado');
+
+  if (tipo === 'fraccionado') {
+    cardFrac.style.display = '';
+    if (upqField.value === '1' || upqField.value === '') upqField.value = '';
+    document.querySelector('[name="unidad_medida"]').value = 'pza';
+    document.getElementById('lbl-precio-compra').childNodes[0].textContent = 'Precio de compra por caja/paquete (Bs.) ';
+    document.getElementById('txt-precio-compra').textContent = 'Costo total de la caja o paquete que compras.';
+  } else if (tipo === 'granel') {
+    cardFrac.style.display = 'none';
+    upqField.value = 1;
+    document.querySelector('[name="unidad_medida"]').value = 'kg';
+    document.getElementById('lbl-precio-compra').childNodes[0].textContent = 'Precio de compra (Bs./kg) ';
+    document.getElementById('txt-precio-compra').textContent = 'Costo por kilogramo o litro.';
+  } else {
+    cardFrac.style.display = 'none';
+    upqField.value = 1;
+    document.getElementById('lbl-precio-compra').childNodes[0].textContent = 'Precio de compra (Bs.) ';
+    document.getElementById('txt-precio-compra').textContent = 'Lo que pagas al proveedor.';
+  }
+  actualizarPreviewFraccionado();
+}
+
+// ── Margen de ganancia ──
+function calcularMargen() {
+  const pc = parseFloat(document.querySelector('[name="precio_compra"]')?.value) || 0;
+  const pv = parseFloat(document.querySelector('[name="precio_venta"]')?.value) || 0;
+  const upq = parseInt(document.querySelector('[name="unidades_por_paquete"]')?.value) || 1;
+
+  let costoU = (tipoProducto === 'fraccionado' && upq > 1) ? pc / upq : pc;
+  const div = document.getElementById('sugerencia-margen');
+
+  if (costoU <= 0 && pv <= 0) { div.style.display = 'none'; return; }
+  div.style.display = '';
+
+  const ganancia = pv - costoU;
+  const pct = costoU > 0 ? ((ganancia / costoU) * 100) : 0;
+  const bar = document.getElementById('margen-bar');
+  const pctEl = document.getElementById('margen-pct');
+  const textoEl = document.getElementById('margen-texto');
+  const ganU = document.getElementById('ganancia-u');
+
+  let color, texto;
+  if (pct < 0) { color = '#ef4444'; texto = 'Pérdida — revisa tus precios'; }
+  else if (pct < 10) { color = '#f59e0b'; texto = 'Margen muy bajo'; }
+  else if (pct < 20) { color = '#84cc16'; texto = 'Margen aceptable'; }
+  else if (pct < 40) { color = '#22c55e'; texto = 'Buen margen'; }
+  else { color = '#10b981'; texto = 'Excelente margen'; }
+
+  bar.style.width = Math.min(Math.abs(pct), 100) + '%';
+  bar.style.background = color;
+  pctEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+  pctEl.style.color = color;
+  textoEl.textContent = texto;
+  textoEl.style.color = color;
+  ganU.textContent = 'Bs. ' + ganancia.toFixed(2);
+  ganU.style.color = color;
+}
+
+function aplicarMargen(pct) {
+  const pc = parseFloat(document.querySelector('[name="precio_compra"]')?.value) || 0;
+  const upq = parseInt(document.querySelector('[name="unidades_por_paquete"]')?.value) || 1;
+  let costoU = (tipoProducto === 'fraccionado' && upq > 1) ? pc / upq : pc;
+  if (costoU <= 0) return;
+  const pvSugerido = costoU * (1 + pct / 100);
+  document.querySelector('[name="precio_venta"]').value = pvSugerido.toFixed(2);
+  calcularMargen();
+  actualizarPreviewFraccionado();
+}
+
+// ── Preview fraccionado ──
+function actualizarPreviewFraccionado() {
+  const upq = parseInt(document.querySelector('[name="unidades_por_paquete"]')?.value) || 1;
+  const npaq = document.querySelector('[name="nombre_paquete"]')?.value || 'Caja';
+  const pc = parseFloat(document.querySelector('[name="precio_compra"]')?.value) || 0;
+  const pv = parseFloat(document.querySelector('[name="precio_venta"]')?.value) || 0;
+  const pp = parseFloat(document.querySelector('[name="precio_venta_paquete"]')?.value) || 0;
+  const prev = document.getElementById('preview-fraccionado');
+
+  document.querySelectorAll('.pv-npaq').forEach(el => el.textContent = npaq);
+
+  if (upq > 1 && (pc > 0 || pv > 0)) {
+    prev.classList.add('has-data');
+    prev.style.display = '';
+    const costoU = pc > 0 ? pc / upq : 0;
+    const margenU = pv > 0 && costoU > 0 ? ((pv - costoU) / costoU * 100).toFixed(1) : null;
+    document.getElementById('pv-costo-caja').textContent = pc > 0 ? 'Bs. ' + pc.toFixed(2) : '—';
+    document.getElementById('pv-upq').textContent = upq + ' unidades';
+    document.getElementById('pv-costo-u').textContent = costoU > 0 ? costoU.toFixed(2) : '—';
+    document.getElementById('pv-venta-u').textContent = pv > 0 ? pv.toFixed(2) : '—';
+    document.getElementById('pv-margen-u').textContent = margenU ? '+' + margenU + '%' : '—';
+
+    if (pp > 0) {
+      const margenCaja = pc > 0 ? ((pp - pc) / pc * 100).toFixed(1) : null;
+      document.getElementById('pv-row-caja').style.display = '';
+      document.getElementById('pv-row-mcaja').style.display = '';
+      document.getElementById('pv-venta-caja').textContent = pp.toFixed(2);
+      document.getElementById('pv-margen-caja').textContent = margenCaja ? '+' + margenCaja + '%' : '—';
+    } else {
+      document.getElementById('pv-row-caja').style.display = 'none';
+      document.getElementById('pv-row-mcaja').style.display = 'none';
+    }
+
+    // Hint stock
+    const sh = document.getElementById('stock-hint-fraccionado');
+    const stockActual = parseInt(document.querySelector('[name="stock_actual"]')?.value) || 0;
+    document.getElementById('sh-upq').textContent = upq;
+    const cajas = Math.floor(stockActual / upq);
+    const sueltas = stockActual % upq;
+    document.getElementById('sh-n').textContent = cajas;
+    document.getElementById('sh-total').textContent = stockActual;
+    sh.style.display = upq > 1 ? '' : 'none';
+
+    // Equiv en paso 4
+    const eq = document.getElementById('stock-equivalente');
+    if (stockActual > 0) {
+      eq.style.display = '';
+      document.getElementById('stock-eq-cajas').textContent = cajas;
+      document.getElementById('stock-eq-sueltas').textContent = sueltas;
+    } else {
+      eq.style.display = 'none';
+    }
+  } else {
+    prev.style.display = 'none';
+    prev.classList.remove('has-data');
+    document.getElementById('stock-hint-fraccionado').style.display = 'none';
+    document.getElementById('stock-equivalente').style.display = 'none';
+  }
+
+  calcularMargen();
+  actualizarStockVisual();
+}
+
+// ── Stock visual ──
+function actualizarStockVisual() {
+  const sa = parseInt(document.querySelector('[name="stock_actual"]')?.value) || 0;
+  const sm = parseInt(document.querySelector('[name="stock_minimo"]')?.value) || 0;
+  const sv = document.getElementById('stock-visual');
+  if (sa > 0 || sm > 0) {
+    sv.style.display = '';
+    document.getElementById('sv-actual').textContent = sa;
+    document.getElementById('sv-minimo').textContent = sm;
+    const pct = sm > 0 ? Math.min((sa / sm) * 100, 100) : 100;
+    const bar = document.getElementById('sv-bar');
+    bar.style.width = pct + '%';
+    let color, txt;
+    if (sa <= sm) { color = '#ef4444'; txt = '⚠️ Ya estás en alerta desde el inicio'; }
+    else if (sa <= sm * 1.5) { color = '#f59e0b'; txt = 'Pocos productos antes de la alerta'; }
+    else { color = '#22c55e'; txt = (sa - sm) + ' unidades de margen antes de la alerta'; }
+    bar.style.background = color;
+    document.getElementById('sv-texto').textContent = txt;
+    document.getElementById('sv-texto').style.color = color;
+  } else {
+    sv.style.display = 'none';
+  }
+}
+
+function setStockMin(v) {
+  document.querySelector('[name="stock_minimo"]').value = v;
+  actualizarStockVisual();
+}
+
+function setNombrePaq(v) {
+  document.querySelector('[name="nombre_paquete"]').value = v;
+  actualizarPreviewFraccionado();
+}
+
+// ── Resumen paso 5 ──
+function generarResumen() {
+  const nombre = document.querySelector('[name="nombre"]')?.value || '(sin nombre)';
+  const barras = document.querySelector('[name="codigo_barras"]')?.value || '—';
+  const pc = document.querySelector('[name="precio_compra"]')?.value || '0';
+  const pv = document.querySelector('[name="precio_venta"]')?.value || '0';
+  const pp = document.querySelector('[name="precio_venta_paquete"]')?.value || '';
+  const sa = document.querySelector('[name="stock_actual"]')?.value || '0';
+  const sm = document.querySelector('[name="stock_minimo"]')?.value || '0';
+  const upq = parseInt(document.querySelector('[name="unidades_por_paquete"]')?.value) || 1;
+  const npaq = document.querySelector('[name="nombre_paquete"]')?.value || 'Caja';
+  const tipoLabel = { simple: 'Producto Simple', fraccionado: 'Fraccionado (Caja/Unidad)', granel: 'A Granel / Por Peso', servicio: 'Otro / Servicio' };
+
+  let items = [
+    { icon: '🏷️', label: 'Nombre', value: nombre },
+    { icon: '📋', label: 'Tipo', value: tipoLabel[tipoProducto] || '—' },
+    { icon: '🔢', label: 'Código de barras', value: barras },
+    { icon: '💵', label: 'Precio de compra', value: 'Bs. ' + parseFloat(pc || 0).toFixed(2) },
+    { icon: '💰', label: 'Precio de venta / unidad', value: 'Bs. ' + parseFloat(pv || 0).toFixed(2) },
+  ];
+  if (upq > 1) {
+    items.push({ icon: '📦', label: 'Configuración de ' + npaq, value: upq + ' uds/caja | Costo/u: Bs. ' + (parseFloat(pc) / upq).toFixed(2) });
+    if (pp) items.push({ icon: '🛒', label: 'Precio venta ' + npaq, value: 'Bs. ' + parseFloat(pp).toFixed(2) });
+  }
+  items.push({ icon: '📊', label: 'Stock inicial', value: sa + ' unidades' });
+  items.push({ icon: '⚠️', label: 'Alerta de stock bajo', value: '≤ ' + sm + ' unidades' });
+
+  const body = document.getElementById('resumen-body');
+  body.innerHTML = '<p class="text-muted small mb-3">Revisa la información antes de guardar.</p>' +
+    items.map(i => `<div class="summary-item">
+      <span style="font-size:1.3rem;flex-shrink:0">${i.icon}</span>
+      <div><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">${i.label}</div>
+      <div class="fw-semibold">${i.value}</div></div></div>`).join('');
+}
+
+// ── Listeners ──
+['precio_compra','precio_venta','unidades_por_paquete','nombre_paquete','precio_venta_paquete'].forEach(n => {
+  document.querySelector(`[name="${n}"]`)?.addEventListener('input', () => {
+    actualizarPreviewFraccionado();
+    calcularMargen();
+  });
+});
+['stock_actual','stock_minimo'].forEach(n => {
+  document.querySelector(`[name="${n}"]`)?.addEventListener('input', () => {
+    actualizarStockVisual();
+    actualizarPreviewFraccionado();
+  });
+});
+
+// ── Bootstrap tooltips ──
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el, { placement: 'top', trigger: 'hover' }));
+
+// ── Init si hay errores del form (volver al paso donde están los errores) ──
+{% if form.errors %}
+  // Si hay errores del servidor, mostrar paso 2 o el correspondiente
+  {% if form.nombre.errors or form.codigo_barras.errors %}irPaso(2);
+  {% elif form.precio_compra.errors or form.precio_venta.errors %}irPaso(3);
+  {% else %}irPaso(2);
+  {% endif %}
+  // Activar tipo para que se muestren los campos
+  const upqVal = parseInt(document.querySelector('[name="unidades_por_paquete"]')?.value) || 1;
+  seleccionarTipo(upqVal > 1 ? 'fraccionado' : 'simple');
+{% endif %}
+
+// Init
+actualizarPreviewFraccionado();
+</script>
 {% endblock %}

@@ -3,28 +3,62 @@
 {% block page_title %}Punto de Venta - Ticket #{{ venta.numero_ticket }}{% endblock %}
 {% block extra_css %}
 <style>
-.pv-panel { height: calc(100vh - 140px); display: flex; flex-direction: column; }
+@media (min-width: 768px) {
+  .pv-height { height: calc(100vh - 140px); }
+  .pv-panel { display: flex; flex-direction: column; height: 100%; }
+  .productos-lista { flex: 1; overflow-y: auto; }
+  .ticket-panel { display: flex; flex-direction: column; height: 100%; }
+  .ticket-items { flex: 1; overflow-y: auto; }
+}
+@media (max-width: 767.98px) {
+  .productos-lista { max-height: 45vh; overflow-y: auto; }
+  .ticket-items { max-height: 35vh; overflow-y: auto; }
+}
 .buscar-section { background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
-.productos-lista { flex: 1; overflow-y: auto; background: #fff; border-radius: 12px; padding: 0.5rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+.productos-lista { background: #fff; border-radius: 12px; padding: 0.5rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
 .prod-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; margin-bottom: 4px; transition: all .15s; }
-.prod-item:hover { background: #f0fdf4; border-color: #1a6b3c; }
-.ticket-panel { background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); display: flex; flex-direction: column; height: calc(100vh - 140px); }
-.ticket-items { flex: 1; overflow-y: auto; }
-.ticket-footer { border-top: 2px solid #e2e8f0; padding-top: 1rem; }
+.prod-item:hover, .prod-item:active { background: #f0fdf4; border-color: #1a6b3c; }
+.ticket-panel { background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+.ticket-footer { border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 0.5rem; }
 .total-display { font-size: 2rem; font-weight: 800; color: #1a6b3c; }
-.modal-overlay { display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center; }
+.modal-overlay { display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center; padding: 1rem; }
 .modal-overlay.show { display: flex; }
+.modal-box { background:#fff; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 420px; }
+.pv-tabs .nav-link { color: #64748b; border-radius: 8px; font-weight: 600; }
+.pv-tabs .nav-link.active { background: var(--primary,#1a6b3c); color: #fff; }
+.btn-tipo { border: 2px solid #e2e8f0; border-radius: 8px; padding: .5rem 1rem; cursor: pointer; transition: all .15s; text-align: center; }
+.btn-tipo.selected { border-color: #1a6b3c; background: #f0fdf4; }
+.btn-tipo:hover { border-color: #1a6b3c; }
+.paq-badge { font-size: .65rem; padding: .2em .5em; border-radius: 4px; background: #dbeafe; color: #1e40af; font-weight: 700; vertical-align: middle; }
 </style>
 {% endblock %}
 {% block content %}
-<div class="row g-3" style="height: calc(100vh - 140px);">
-  <!-- Panel izquierdo: busqueda de productos -->
-  <div class="col-md-7 d-flex flex-column">
+
+<!-- Tabs mobile -->
+<div class="d-md-none mb-3">
+  <ul class="nav nav-pills nav-fill pv-tabs" id="pvTabs">
+    <li class="nav-item">
+      <button class="nav-link active w-100" id="tab-buscar-btn" onclick="mostrarPanel('buscar')">
+        <i class="fas fa-search me-1"></i>Buscar
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link w-100" id="tab-ticket-btn" onclick="mostrarPanel('ticket')">
+        <i class="fas fa-receipt me-1"></i>Ticket
+        {% if items %}<span class="badge bg-warning text-dark ms-1">{{ items|length }}</span>{% endif %}
+      </button>
+    </li>
+  </ul>
+</div>
+
+<div class="row g-3 pv-height">
+  <!-- Panel izquierdo: búsqueda -->
+  <div class="col-12 col-md-7 d-flex flex-column" id="panel-buscar">
     <div class="buscar-section">
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-        <input type="text" id="buscar-input" class="form-control form-control-lg border-start-0" 
-               placeholder="Buscar producto por nombre o codigo..." autofocus>
+        <input type="text" id="buscar-input" class="form-control form-control-lg border-start-0"
+               placeholder="Buscar producto por nombre o código..." autofocus>
       </div>
     </div>
     <div class="productos-lista" id="resultados-productos">
@@ -36,7 +70,7 @@
   </div>
 
   <!-- Panel derecho: ticket -->
-  <div class="col-md-5">
+  <div class="col-12 col-md-5" id="panel-ticket">
     <div class="ticket-panel">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="fw-bold mb-0"><i class="fas fa-receipt me-2"></i>Ticket #{{ venta.numero_ticket }}</h6>
@@ -46,15 +80,26 @@
         {% for item in items %}
         <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded">
           <div class="flex-grow-1">
-            <div class="fw-semibold small">{{ item.producto.nombre }}</div>
-            <div class="text-muted" style="font-size:.75rem">Bs. {{ item.precio_unitario|floatformat:2 }} x {{ item.cantidad }} = <strong>Bs. {{ item.subtotal|floatformat:2 }}</strong></div>
+            <div class="fw-semibold small">
+              {{ item.producto.nombre }}
+              {% if item.es_paquete %}
+                <span class="paq-badge">{{ item.producto.nombre_paquete }}</span>
+              {% endif %}
+            </div>
+            <div class="text-muted" style="font-size:.75rem">
+              Bs. {{ item.precio_unitario|floatformat:2 }} × {{ item.cantidad }}
+              {% if item.es_paquete %}
+                <span class="text-muted">({{ item.unidades_descontadas }} uds.)</span>
+              {% endif %}
+              = <strong>Bs. {{ item.subtotal|floatformat:2 }}</strong>
+            </div>
           </div>
           <a href="/ventas/quitar/{{ item.pk }}/" class="btn btn-sm btn-outline-danger py-0 px-2">&times;</a>
         </div>
         {% empty %}
         <div class="text-center text-muted py-4">
           <i class="fas fa-shopping-cart fa-2x mb-2 d-block opacity-25"></i>
-          Ticket vacio
+          Ticket vacío
         </div>
         {% endfor %}
       </div>
@@ -83,13 +128,13 @@
 
 <!-- Modal de pago -->
 <div class="modal-overlay" id="modal-pago">
-  <div class="bg-white rounded-3 p-4" style="width:380px">
+  <div class="modal-box">
     <h5 class="fw-bold mb-3"><i class="fas fa-cash-register me-2"></i>Completar Venta</h5>
     <div class="alert alert-success mb-3">Total a cobrar: <strong class="fs-4">Bs. {{ venta.total|default:"0.00"|floatformat:2 }}</strong></div>
     <form method="post" action="/ventas/completar/">
       {% csrf_token %}
       <div class="mb-3">
-        <label class="form-label fw-semibold">Metodo de Pago</label>
+        <label class="form-label fw-semibold">Método de Pago</label>
         <select name="metodo_pago" class="form-select">
           <option value="efectivo">Efectivo</option>
           <option value="tarjeta">Tarjeta</option>
@@ -99,11 +144,11 @@
       </div>
       <div class="mb-3">
         <label class="form-label fw-semibold">Monto Recibido</label>
-        <input type="number" name="monto_recibido" class="form-control form-control-lg text-end" 
+        <input type="number" name="monto_recibido" class="form-control form-control-lg text-end"
                step="0.01" min="0" value="{{ venta.total|default:0 }}" id="monto-input">
       </div>
       <div class="mb-3">
-        <label class="form-label fw-semibold">Descuento ($)</label>
+        <label class="form-label fw-semibold">Descuento (Bs.)</label>
         <input type="number" name="descuento" class="form-control" step="0.01" min="0" value="0">
       </div>
       <div class="d-flex gap-2">
@@ -114,19 +159,40 @@
   </div>
 </div>
 
-<!-- Modal cantidad -->
+<!-- Modal de cantidad/tipo de venta -->
 <div class="modal-overlay" id="modal-cantidad">
-  <div class="bg-white rounded-3 p-4" style="width:320px">
-    <h6 class="fw-bold mb-3" id="modal-prod-nombre">Agregar Producto</h6>
+  <div class="modal-box" style="max-width:380px">
+    <h6 class="fw-bold mb-1" id="modal-prod-nombre">Agregar Producto</h6>
+    <p class="text-muted small mb-3" id="modal-stock-info"></p>
     <form method="post" action="/ventas/agregar/">
       {% csrf_token %}
       <input type="hidden" name="producto_id" id="modal-prod-id">
-      <div class="mb-3">
-        <label class="form-label">Cantidad</label>
-        <input type="number" name="cantidad" class="form-control form-control-lg text-center" min="1" value="1" id="modal-cantidad-input">
+      <input type="hidden" name="es_paquete" id="modal-es-paquete" value="0">
+
+      <!-- Tipo de venta (solo si tiene paquete) -->
+      <div id="seccion-tipo-venta" style="display:none" class="mb-3">
+        <label class="form-label fw-semibold small">¿Cómo deseas agregar?</label>
+        <div class="d-flex gap-2">
+          <div class="btn-tipo selected flex-fill" id="btn-por-unidad" onclick="seleccionarTipo('unidad')">
+            <div class="fw-semibold small" id="lbl-unidad">Por Unidad</div>
+            <div class="text-muted" style="font-size:.75rem">Bs. <span id="precio-unidad">—</span></div>
+          </div>
+          <div class="btn-tipo flex-fill" id="btn-por-paquete" onclick="seleccionarTipo('paquete')">
+            <div class="fw-semibold small" id="lbl-paquete">Por Caja</div>
+            <div class="text-muted" style="font-size:.75rem">Bs. <span id="precio-paquete">—</span></div>
+          </div>
+        </div>
       </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small" id="lbl-cantidad">Cantidad</label>
+        <input type="number" name="cantidad" class="form-control form-control-lg text-center"
+               min="1" value="1" id="modal-cantidad-input">
+        <div class="form-text" id="stock-disponible-hint"></div>
+      </div>
+
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-plus me-1"></i>Agregar</button>
+        <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-plus me-1"></i>Agregar al Ticket</button>
         <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('modal-cantidad').classList.remove('show')">Cancelar</button>
       </div>
     </form>
@@ -135,12 +201,37 @@
 {% endblock %}
 {% block extra_js %}
 <script>
+// Tabs mobile
+function mostrarPanel(panel) {
+  if (window.innerWidth >= 768) return;
+  const pb = document.getElementById('panel-buscar');
+  const pt = document.getElementById('panel-ticket');
+  const tb = document.getElementById('tab-buscar-btn');
+  const tt = document.getElementById('tab-ticket-btn');
+  if (panel === 'buscar') {
+    pb.style.display = ''; pt.style.display = 'none';
+    tb.classList.add('active'); tt.classList.remove('active');
+    document.getElementById('buscar-input').focus();
+  } else {
+    pb.style.display = 'none'; pt.style.display = '';
+    tt.classList.add('active'); tb.classList.remove('active');
+  }
+}
+function inicializarPaneles() {
+  if (window.innerWidth < 768) document.getElementById('panel-ticket').style.display = 'none';
+  else { document.getElementById('panel-buscar').style.display = ''; document.getElementById('panel-ticket').style.display = ''; }
+}
+window.addEventListener('resize', inicializarPaneles);
+inicializarPaneles();
+
+// Búsqueda AJAX
 let timer;
 document.getElementById('buscar-input').addEventListener('input', function() {
   clearTimeout(timer);
   const q = this.value.trim();
   if (!q) {
-    document.getElementById('resultados-productos').innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-search fa-2x mb-2 d-block opacity-25"></i>Escribe para buscar productos...</div>';
+    document.getElementById('resultados-productos').innerHTML =
+      '<div class="text-center text-muted py-5"><i class="fas fa-search fa-2x mb-2 d-block opacity-25"></i>Escribe para buscar productos...</div>';
     return;
   }
   timer = setTimeout(() => buscar(q), 300);
@@ -154,26 +245,79 @@ async function buscar(q) {
     cont.innerHTML = '<div class="text-center text-muted py-4">No se encontraron productos.</div>';
     return;
   }
-  cont.innerHTML = data.productos.map(p => `
-    <div class="prod-item" onclick="seleccionarProducto(${p.id}, '${p.nombre.replace(/'/g,"\\'")}', ${p.precio})">
-      <div>
-        <div class="fw-semibold">${p.nombre}</div>
-        <small class="text-muted">Stock: ${p.stock} ${p.unidad}</small>
-      </div>
-      <div class="text-end">
-        <div class="fw-bold text-success">Bs. ${p.precio}</div>
-      </div>
-    </div>
-  `).join('');
+  cont.innerHTML = data.productos.map(p => {
+    let stockInfo = `Stock: ${p.stock} ${p.unidad}`;
+    if (p.tiene_paquete && p.stock_paquetes !== null) {
+      stockInfo += ` (${p.stock_paquetes} ${p.nombre_paquete}s)`;
+    }
+    let precioHtml = `<div class="fw-bold text-success">Bs. ${p.precio}</div>`;
+    if (p.tiene_paquete && p.precio_paquete) {
+      precioHtml += `<div class="small text-primary">${p.nombre_paquete}: Bs. ${p.precio_paquete}</div>`;
+    }
+    return `
+      <div class="prod-item" onclick="seleccionarProducto(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+        <div>
+          <div class="fw-semibold">${p.nombre}</div>
+          <small class="text-muted">${stockInfo}</small>
+        </div>
+        <div class="text-end">${precioHtml}</div>
+      </div>`;
+  }).join('');
 }
 
-function seleccionarProducto(id, nombre, precio) {
-  document.getElementById('modal-prod-id').value = id;
-  document.getElementById('modal-prod-nombre').textContent = nombre + ' - Bs. ' + precio;
+// Estado del producto seleccionado
+let prodActual = null;
+let tipoActual = 'unidad';
+
+function seleccionarProducto(p) {
+  prodActual = p;
+  tipoActual = 'unidad';
+  document.getElementById('modal-prod-id').value = p.id;
+  document.getElementById('modal-prod-nombre').textContent = p.nombre;
   document.getElementById('modal-cantidad-input').value = 1;
+
+  const secTipo = document.getElementById('seccion-tipo-venta');
+  if (p.tiene_paquete && p.precio_paquete) {
+    secTipo.style.display = '';
+    document.getElementById('lbl-unidad').textContent = `Por ${p.unidad}`;
+    document.getElementById('precio-unidad').textContent = p.precio;
+    document.getElementById('lbl-paquete').textContent = `Por ${p.nombre_paquete}`;
+    document.getElementById('precio-paquete').textContent = p.precio_paquete;
+    seleccionarTipo('unidad');
+  } else {
+    secTipo.style.display = 'none';
+    document.getElementById('modal-es-paquete').value = '0';
+    document.getElementById('lbl-cantidad').textContent = `Cantidad (${p.unidad})`;
+    document.getElementById('stock-disponible-hint').textContent = `Disponible: ${p.stock} ${p.unidad}`;
+    document.getElementById('modal-stock-info').textContent = `Precio: Bs. ${p.precio} / ${p.unidad}`;
+  }
+
   document.getElementById('modal-cantidad').classList.add('show');
   document.getElementById('modal-cantidad-input').focus();
   document.getElementById('modal-cantidad-input').select();
+}
+
+function seleccionarTipo(tipo) {
+  tipoActual = tipo;
+  const esPaq = tipo === 'paquete';
+  document.getElementById('modal-es-paquete').value = esPaq ? '1' : '0';
+  document.getElementById('btn-por-unidad').classList.toggle('selected', !esPaq);
+  document.getElementById('btn-por-paquete').classList.toggle('selected', esPaq);
+
+  if (esPaq && prodActual) {
+    document.getElementById('lbl-cantidad').textContent = `Cantidad de ${prodActual.nombre_paquete}s`;
+    document.getElementById('stock-disponible-hint').textContent =
+      `Disponible: ${prodActual.stock_paquetes} ${prodActual.nombre_paquete}s`;
+    document.getElementById('modal-stock-info').textContent =
+      `Precio: Bs. ${prodActual.precio_paquete} / ${prodActual.nombre_paquete} (${prodActual.upq} uds. c/u)`;
+  } else if (prodActual) {
+    document.getElementById('lbl-cantidad').textContent = `Cantidad (${prodActual.unidad})`;
+    document.getElementById('stock-disponible-hint').textContent =
+      `Disponible: ${prodActual.stock} ${prodActual.unidad}`;
+    document.getElementById('modal-stock-info').textContent =
+      `Precio: Bs. ${prodActual.precio} / ${prodActual.unidad}`;
+  }
+  document.getElementById('modal-cantidad-input').value = 1;
 }
 </script>
 {% endblock %}

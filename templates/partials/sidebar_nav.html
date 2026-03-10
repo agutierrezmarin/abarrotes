@@ -1,0 +1,59 @@
+<nav class="mt-2">
+  <div class="nav-section">Principal</div>
+  <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+    <i class="fas fa-home"></i> Inicio
+  </a>
+
+  {% if user.groups.all.0.name != 'Vendedor' or user.is_superuser %}
+  <div class="nav-section">Inventario</div>
+  <a href="/inventario/" class="nav-link {% if '/inventario/' in request.path %}active{% endif %}">
+    <i class="fas fa-boxes"></i> Dashboard
+  </a>
+  <a href="/inventario/productos/" class="nav-link">
+    <i class="fas fa-tag"></i> Productos
+  </a>
+  <a href="/inventario/alertas/" class="nav-link">
+    <i class="fas fa-exclamation-triangle"></i> Alertas Vencimiento
+  </a>
+  <a href="/inventario/proveedores/" class="nav-link {% if 'proveedores' in request.path %}active{% endif %}">
+    <i class="fas fa-truck"></i> Proveedores
+  </a>
+  {% endif %}
+
+  <div class="nav-section">Ventas</div>
+  <a href="/ventas/" class="nav-link {% if '/ventas/' in request.path %}active{% endif %}">
+    <i class="fas fa-cash-register"></i> Punto de Venta
+  </a>
+  <a href="/ventas/historial/" class="nav-link">
+    <i class="fas fa-receipt"></i> Historial
+  </a>
+
+  <div class="nav-section">Reportes</div>
+  <a href="/reportes/vendedor/" class="nav-link">
+    <i class="fas fa-chart-bar"></i> Mis Ventas
+  </a>
+  {% if user.groups.all.0.name == 'Administrador' or user.groups.all.0.name == 'Gerente' or user.is_superuser %}
+  <a href="/reportes/administrador/" class="nav-link">
+    <i class="fas fa-chart-line"></i> Reporte Admin
+  </a>
+  <a href="/reportes/gerente/" class="nav-link">
+    <i class="fas fa-chart-pie"></i> Reporte Gerente
+  </a>
+  {% endif %}
+
+  {% if user.groups.all.0.name == 'Administrador' or user.is_superuser %}
+  <div class="nav-section">Administración</div>
+  <a href="/usuarios/" class="nav-link {% if '/usuarios/' in request.path %}active{% endif %}">
+    <i class="fas fa-users-cog"></i> Gestión de Usuarios
+  </a>
+  {% endif %}
+
+  <div class="nav-section">Cuenta</div>
+  <a href="/usuarios/mi-perfil/" class="nav-link {% if 'mi-perfil' in request.path %}active{% endif %}">
+    <i class="fas fa-user-circle"></i> Mi Perfil
+  </a>
+  <button type="button" class="nav-link w-100 text-start" style="background:none;border:none;"
+          onclick="document.getElementById('modal-logout').style.display='flex'">
+    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+  </button>
+</nav>

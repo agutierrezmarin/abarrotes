@@ -2,7 +2,7 @@
 {% block title %}Gestión de Usuarios{% endblock %}
 {% block page_title %}Gestión de Usuarios{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <span class="text-muted small">{{ usuarios.count }} usuario(s) registrado(s)</span>
   <a href="{% url 'usuarios:crear' %}" class="btn btn-success">
     <i class="fas fa-user-plus me-1"></i>Nuevo Usuario
@@ -27,7 +27,14 @@
         {% for u in usuarios %}
         <tr class="{% if not u.is_active %}opacity-50{% endif %}">
           <td class="fw-semibold">
-            <i class="fas fa-user-circle text-muted me-1"></i>{{ u.username }}
+            <a href="{% url 'usuarios:perfil_usuario' u.pk %}" class="text-decoration-none text-dark">
+              {% if u.perfil.foto %}
+                <img src="{{ u.perfil.foto.url }}" class="rounded-circle me-1" style="width:24px;height:24px;object-fit:cover;">
+              {% else %}
+                <i class="fas fa-user-circle text-muted me-1"></i>
+              {% endif %}
+              {{ u.username }}
+            </a>
           </td>
           <td>{{ u.get_full_name|default:"—" }}</td>
           <td><small class="text-muted">{{ u.email|default:"—" }}</small></td>
@@ -58,7 +65,10 @@
           </td>
           <td>
             <div class="d-flex gap-1">
-              <a href="{% url 'usuarios:editar' u.pk %}" class="btn btn-sm btn-outline-primary">
+              <a href="{% url 'usuarios:perfil_usuario' u.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver perfil">
+                <i class="fas fa-eye"></i>
+              </a>
+              <a href="{% url 'usuarios:editar' u.pk %}" class="btn btn-sm btn-outline-primary" title="Editar cuenta">
                 <i class="fas fa-edit"></i>
               </a>
               {% if u != request.user %}

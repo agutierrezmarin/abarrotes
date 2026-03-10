@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Q
 from datetime import timedelta
 from .models import Producto, Categoria, Proveedor, LoteProducto, MovimientoInventario
-from .forms import ProductoForm, LoteForm, AjusteStockForm
+from .forms import ProductoForm, LoteForm, AjusteStockForm, ProveedorForm
 
 
 @login_required
@@ -19,7 +19,7 @@ def dashboard_inventario(request):
             alertas.append({'tipo': 'stock', 'nivel': 'warning', 'mensaje': f'Stock bajo: {p.nombre} ({p.stock_actual} {p.get_unidad_medida_display()})'})
 
     # Alertas de vencimiento
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     lotes_criticos = LoteProducto.objects.filter(
         fecha_vencimiento__lte=hoy + timedelta(days=7),
         fecha_vencimiento__gte=hoy
@@ -44,21 +44,48 @@ def dashboard_inventario(request):
 
 @login_required
 def lista_productos(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '')
-    productos = Producto.objects.filter(activo=True).select_related('categoria', 'proveedor')
+    proveedor_id = request.GET.get('proveedor', '')
+    estado = request.GET.get('estado', 'activo')   # activo | inactivo | todos
+    stock_bajo = request.GET.get('stock_bajo', '')  # '1' para filtrar solo stock bajo
+
+    productos = Producto.objects.select_related('categoria', 'proveedor').order_by('nombre')
+
+    if estado == 'activo':
+        productos = productos.filter(activo=True)
+    elif estado == 'inactivo':
+        productos = productos.filter(activo=False)
+    # 'todos' no filtra por activo
 
     if query:
-        productos = productos.filter(Q(nombre__icontains=query) | Q(codigo_barras__icontains=query))
+        productos = productos.filter(
+            Q(nombre__icontains=query) |
+            Q(codigo_barras__icontains=query) |
+            Q(descripcion__icontains=query)
+        )
     if categoria_id:
         productos = productos.filter(categoria_id=categoria_id)
+    if proveedor_id:
+        productos = productos.filter(proveedor_id=proveedor_id)
+    if stock_bajo == '1':
+        productos = [p for p in productos if p.stock_bajo]
 
     categorias = Categoria.objects.all()
+    proveedores = Proveedor.objects.filter(activo=True)
+    hay_filtros = any([query, categoria_id, proveedor_id, stock_bajo == '1', estado != 'activo'])
+
     return render(request, 'inventario/productos.html', {
         'productos': productos,
         'categorias': categorias,
+        'proveedores': proveedores,
         'query': query,
         'categoria_sel': categoria_id,
+        'proveedor_sel': proveedor_id,
+        'estado': estado,
+        'stock_bajo': stock_bajo,
+        'hay_filtros': hay_filtros,
+        'total_activos': Producto.objects.filter(activo=True).count(),
     })
 
 
@@ -155,17 +182,26 @@ def agregar_lote(request, pk):
         if form.is_valid():
             lote = form.save(commit=False)
             lote.producto = producto
+
+            # Si se ingresó en paquetes, calcular la cantidad en unidades
+            ingresar_en_paquetes = form.cleaned_data.get('ingresar_en_paquetes')
+            num_paquetes = form.cleaned_data.get('num_paquetes')
+            if ingresar_en_paquetes and num_paquetes and producto.tiene_paquete:
+                lote.cantidad = num_paquetes * producto.unidades_por_paquete
+                motivo_extra = f' ({num_paquetes} {producto.nombre_paquete}s x {producto.unidades_por_paquete} uds.)'
+            else:
+                motivo_extra = ''
+
             lote.save()
-            # Actualizar stock del producto
             stock_anterior = producto.stock_actual
             producto.stock_actual += lote.cantidad
             producto.save()
             MovimientoInventario.objects.create(
                 producto=producto, tipo='entrada', cantidad=lote.cantidad,
                 stock_anterior=stock_anterior, stock_nuevo=producto.stock_actual,
-                motivo=f'Entrada de lote {lote.numero_lote or lote.pk}', usuario=request.user
+                motivo=f'Entrada de lote {lote.numero_lote or lote.pk}{motivo_extra}', usuario=request.user
             )
-            messages.success(request, 'Lote agregado y stock actualizado.')
+            messages.success(request, f'Lote agregado: {lote.cantidad} unidades en stock.')
             return redirect('inventario:detalle_producto', pk=pk)
     else:
         form = LoteForm()
@@ -174,7 +210,7 @@ def agregar_lote(request, pk):
 
 @login_required
 def alertas_vencimiento(request):
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     lotes_vencidos = LoteProducto.objects.filter(fecha_vencimiento__lt=hoy).select_related('producto')
     lotes_criticos = LoteProducto.objects.filter(
         fecha_vencimiento__range=[hoy, hoy + timedelta(days=7)]
@@ -188,3 +224,88 @@ def alertas_vencimiento(request):
         'lotes_criticos': lotes_criticos,
         'lotes_proximos': lotes_proximos,
     })
+
+
+# ── Proveedores ──────────────────────────────────────────────────────────────
+
+def _solo_admin(user):
+    return user.groups.filter(name__in=['Administrador', 'Gerente']).exists() or user.is_superuser
+
+
+@login_required
+def lista_proveedores(request):
+    query = request.GET.get('q', '')
+    solo_activos = request.GET.get('activos', '1')
+    proveedores = Proveedor.objects.all()
+    if solo_activos == '1':
+        proveedores = proveedores.filter(activo=True)
+    if query:
+        proveedores = proveedores.filter(
+            Q(nombre__icontains=query) | Q(contacto__icontains=query) |
+            Q(telefono__icontains=query) | Q(ciudad__icontains=query)
+        )
+    return render(request, 'inventario/proveedores.html', {
+        'proveedores': proveedores,
+        'query': query,
+        'solo_activos': solo_activos,
+        'total': Proveedor.objects.count(),
+        'activos': Proveedor.objects.filter(activo=True).count(),
+    })
+
+
+@login_required
+def detalle_proveedor(request, pk):
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    productos = proveedor.productos.filter(activo=True).order_by('nombre')
+    return render(request, 'inventario/detalle_proveedor.html', {
+        'proveedor': proveedor,
+        'productos': productos,
+    })
+
+
+@login_required
+def crear_proveedor(request):
+    if not _solo_admin(request.user):
+        messages.error(request, 'No tienes permisos para crear proveedores.')
+        return redirect('inventario:lista_proveedores')
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST)
+        if form.is_valid():
+            proveedor = form.save()
+            messages.success(request, f'Proveedor "{proveedor.nombre}" creado correctamente.')
+            return redirect('inventario:detalle_proveedor', pk=proveedor.pk)
+    else:
+        form = ProveedorForm()
+    return render(request, 'inventario/form_proveedor.html', {'form': form, 'titulo': 'Nuevo Proveedor'})
+
+
+@login_required
+def editar_proveedor(request, pk):
+    if not _solo_admin(request.user):
+        messages.error(request, 'No tienes permisos para editar proveedores.')
+        return redirect('inventario:lista_proveedores')
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST, instance=proveedor)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Proveedor "{proveedor.nombre}" actualizado.')
+            return redirect('inventario:detalle_proveedor', pk=proveedor.pk)
+    else:
+        form = ProveedorForm(instance=proveedor)
+    return render(request, 'inventario/form_proveedor.html', {
+        'form': form, 'titulo': 'Editar Proveedor', 'proveedor': proveedor
+    })
+
+
+@login_required
+def toggle_proveedor(request, pk):
+    if not _solo_admin(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('inventario:lista_proveedores')
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    proveedor.activo = not proveedor.activo
+    proveedor.save()
+    estado = 'activado' if proveedor.activo else 'desactivado'
+    messages.success(request, f'Proveedor "{proveedor.nombre}" {estado}.')
+    return redirect('inventario:detalle_proveedor', pk=pk)

@@ -19,7 +19,7 @@ def solo_gerente(user):
 @login_required
 def reporte_vendedor(request):
     """Reporte básico para vendedores: sus propias ventas del día"""
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     ventas_hoy = Venta.objects.filter(
         vendedor=request.user, estado='completada',
         fecha_venta__date=hoy
@@ -45,7 +45,7 @@ def reporte_administrador(request):
         messages.error(request, 'Acceso restringido.')
         return render(request, 'reportes/sin_acceso.html')
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     inicio_semana = hoy - timedelta(days=hoy.weekday())
     inicio_mes = hoy.replace(day=1)
 
@@ -88,7 +88,7 @@ def reporte_gerente(request):
         messages.error(request, 'Acceso restringido a Gerentes.')
         return render(request, 'reportes/sin_acceso.html')
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     inicio_mes = hoy.replace(day=1)
 
     # Rendimiento por vendedor

@@ -18,10 +18,30 @@ class Categoria(models.Model):
 
 
 class Proveedor(models.Model):
+    CONDICION_PAGO_CHOICES = [
+        ('contado', 'Contado'),
+        ('7dias', 'Crédito 7 días'),
+        ('15dias', 'Crédito 15 días'),
+        ('30dias', 'Crédito 30 días'),
+        ('60dias', 'Crédito 60 días'),
+    ]
+
     nombre = models.CharField(max_length=200)
-    contacto = models.CharField(max_length=100, blank=True)
+    nit = models.CharField(max_length=30, blank=True, verbose_name='NIT / RUC')
+    contacto = models.CharField(max_length=100, blank=True, verbose_name='Nombre del contacto')
     telefono = models.CharField(max_length=20, blank=True)
+    celular = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
+    direccion = models.CharField(max_length=250, blank=True, verbose_name='Dirección')
+    ciudad = models.CharField(max_length=100, blank=True)
+    sitio_web = models.URLField(blank=True, verbose_name='Sitio web')
+    condicion_pago = models.CharField(
+        max_length=10, choices=CONDICION_PAGO_CHOICES,
+        default='contado', verbose_name='Condición de pago'
+    )
+    notas = models.TextField(blank=True, verbose_name='Notas internas')
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateField(default=timezone.localdate)
 
     class Meta:
         verbose_name = 'Proveedor'
@@ -30,6 +50,10 @@ class Proveedor(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    @property
+    def total_productos(self):
+        return self.productos.filter(activo=True).count()
 
 
 class Producto(models.Model):
@@ -52,6 +76,19 @@ class Producto(models.Model):
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     stock_actual = models.PositiveIntegerField(default=0)
     stock_minimo = models.PositiveIntegerField(default=5, help_text='Cantidad mínima antes de generar alerta')
+    # ── Venta fraccionada (compra por caja, vende por unidad) ──
+    unidades_por_paquete = models.PositiveIntegerField(
+        default=1,
+        help_text='Unidades que contiene cada paquete/caja (1 = no aplica fraccionado)'
+    )
+    nombre_paquete = models.CharField(
+        max_length=30, blank=True, default='Caja',
+        help_text='Nombre del paquete (ej: Caja, Paquete, Bolsa, Cartón)'
+    )
+    precio_venta_paquete = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio al vender el paquete completo (dejar vacío si no aplica)'
+    )
     activo = models.BooleanField(default=True)
     imagen = models.ImageField(upload_to='productos/', blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -75,6 +112,22 @@ class Producto(models.Model):
             return ((self.precio_venta - self.precio_compra) / self.precio_compra) * 100
         return 0
 
+    @property
+    def tiene_paquete(self):
+        return self.unidades_por_paquete > 1
+
+    @property
+    def stock_en_paquetes(self):
+        if self.unidades_por_paquete > 1:
+            return self.stock_actual // self.unidades_por_paquete
+        return None
+
+    @property
+    def stock_unidades_sueltas(self):
+        if self.unidades_por_paquete > 1:
+            return self.stock_actual % self.unidades_por_paquete
+        return self.stock_actual
+
 
 class LoteProducto(models.Model):
     """Registra lotes de productos con fecha de vencimiento"""
@@ -97,7 +150,7 @@ class LoteProducto(models.Model):
     @property
     def dias_para_vencer(self):
         if self.fecha_vencimiento:
-            delta = self.fecha_vencimiento - timezone.now().date()
+            delta = self.fecha_vencimiento - timezone.localdate()
             return delta.days
         return None
 

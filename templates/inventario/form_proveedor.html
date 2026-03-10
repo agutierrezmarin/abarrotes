@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+{% block extra_css %}
+<style>
+.field-wrap { margin-bottom: 1rem; }
+.field-wrap .form-label { font-weight: 600; font-size: .82rem; color: #334155; margin-bottom: .3rem; }
+.field-wrap input, .field-wrap select, .field-wrap textarea {
+  border-radius: 8px; border: 1.5px solid #e2e8f0; width: 100%;
+  padding: .5rem .75rem; font-size: .9rem; transition: border-color .2s;
+}
+.field-wrap input:focus, .field-wrap select:focus, .field-wrap textarea:focus {
+  border-color: #1a6b3c; outline: none; box-shadow: 0 0 0 3px rgba(26,107,60,.1);
+}
+input[type="checkbox"] { width: auto !important; }
+.section-chip {
+  display: inline-block; font-size: .65rem; text-transform: uppercase;
+  letter-spacing: .08em; font-weight: 700; padding: .2rem .6rem;
+  border-radius: 20px; background: #f0fdf4; color: #1a6b3c; margin-bottom: .75rem;
+}
+.field-hint { font-size: .74rem; color: #64748b; margin-top: .2rem; }
+.field-error { font-size: .74rem; color: #ef4444; margin-top: .2rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Datos principales -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-building me-2"></i>Datos del Proveedor</div>
+        <div class="card-body">
+          <span class="section-chip">Información básica</span>
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="field-wrap">
+                <label class="form-label">Nombre del proveedor / empresa <span style="color:#ef4444">*</span></label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}<div class="field-error">{{ form.nombre.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">NIT / RUC</label>
+                {{ form.nit }}
+                <div class="field-hint">Número de identificación tributaria. Opcional.</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">Nombre del contacto</label>
+                {{ form.contacto }}
+                <div class="field-hint">Persona de referencia para pedidos o pagos.</div>
+              </div>
+            </div>
+          </div>
+
+          <span class="section-chip mt-2">Comunicación</span>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="field-wrap">
+                <label class="form-label">Teléfono fijo</label>
+                {{ form.telefono }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="field-wrap">
+                <label class="form-label">Celular / WhatsApp</label>
+                {{ form.celular }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="field-wrap">
+                <label class="form-label">Correo electrónico</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="field-error">{{ form.email.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="field-wrap">
+                <label class="form-label">Sitio web</label>
+                {{ form.sitio_web }}
+                <div class="field-hint">Incluye https://. Ej: https://distribuidora.com</div>
+                {% if form.sitio_web.errors %}<div class="field-error">{{ form.sitio_web.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <span class="section-chip mt-2">Ubicación</span>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <div class="field-wrap">
+                <label class="form-label">Dirección</label>
+                {{ form.direccion }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="field-wrap">
+                <label class="form-label">Ciudad</label>
+                {{ form.ciudad }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Condiciones comerciales -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-handshake me-2"></i>Condiciones Comerciales</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">Condición de pago</label>
+                {{ form.condicion_pago }}
+                <div class="field-hint">¿Con qué plazo te vende el proveedor?</div>
+              </div>
+            </div>
+            <div class="col-md-6 d-flex align-items-center gap-2 pt-3">
+              {{ form.activo }}
+              <label class="form-label mb-0">Proveedor activo</label>
+            </div>
+            <div class="col-12">
+              <div class="field-wrap">
+                <label class="form-label">Notas internas</label>
+                {{ form.notas }}
+                <div class="field-hint">Observaciones privadas: descuentos especiales, días de entrega, acuerdos, etc.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referencia rápida: condiciones de pago -->
+      <div class="alert alert-light border small mb-3">
+        <i class="fas fa-info-circle text-primary me-1"></i>
+        <strong>Referencia:</strong>
+        <span class="text-muted">
+          Contado = pago inmediato al recibir mercancía.
+          Crédito = el proveedor te da plazo para pagar (7, 15, 30, 60 días).
+        </span>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success fw-semibold">
+          <i class="fas fa-save me-1"></i>
+          {% if proveedor %}Guardar cambios{% else %}Registrar Proveedor{% endif %}
+        </button>
+        {% if proveedor %}
+        <a href="/inventario/proveedores/{{ proveedor.pk }}/" class="btn btn-outline-secondary">Cancelar</a>
+        {% else %}
+        <a href="/inventario/proveedores/" class="btn btn-outline-secondary">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

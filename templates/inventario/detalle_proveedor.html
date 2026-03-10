@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ proveedor.nombre }}{% endblock %}
+{% block page_title %}Proveedor: {{ proveedor.nombre }}{% endblock %}
+{% block content %}
+
+<div class="row g-3">
+  <!-- Columna izquierda: datos del proveedor -->
+  <div class="col-12 col-md-4">
+    <div class="card mb-3">
+      <div class="card-body text-center py-4">
+        <!-- Avatar inicial -->
+        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center fw-bold"
+             style="width:72px;height:72px;font-size:1.8rem;background:{% if proveedor.activo %}#f0fdf4;color:#1a6b3c{% else %}#f1f5f9;color:#94a3b8{% endif %}">
+          {{ proveedor.nombre|first|upper }}
+        </div>
+        <h5 class="fw-bold mb-1">{{ proveedor.nombre }}</h5>
+        {% if proveedor.nit %}
+          <div class="text-muted small mb-2">NIT: {{ proveedor.nit }}</div>
+        {% endif %}
+        {% if proveedor.activo %}
+          <span class="badge bg-success">Activo</span>
+        {% else %}
+          <span class="badge bg-secondary">Inactivo</span>
+        {% endif %}
+        <div class="mt-3 d-flex gap-2 justify-content-center">
+          {% if request.user.groups.all.0.name == 'Administrador' or request.user.groups.all.0.name == 'Gerente' or request.user.is_superuser %}
+          <a href="/inventario/proveedores/{{ proveedor.pk }}/editar/" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-edit me-1"></i>Editar
+          </a>
+          <a href="/inventario/proveedores/{{ proveedor.pk }}/toggle/" class="btn btn-sm {% if proveedor.activo %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+            {% if proveedor.activo %}<i class="fas fa-ban me-1"></i>Desactivar
+            {% else %}<i class="fas fa-check me-1"></i>Activar{% endif %}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Datos de contacto -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="fas fa-address-card me-2"></i>Contacto</div>
+      <div class="card-body p-0">
+        {% if proveedor.contacto %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-user text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Responsable</div>
+            <div class="fw-semibold small">{{ proveedor.contacto }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if proveedor.telefono %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-phone text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Teléfono</div>
+            <div class="fw-semibold small">{{ proveedor.telefono }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if proveedor.celular %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-mobile-alt text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Celular</div>
+            <div class="fw-semibold small">{{ proveedor.celular }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if proveedor.email %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-envelope text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Correo</div>
+            <a href="mailto:{{ proveedor.email }}" class="fw-semibold small">{{ proveedor.email }}</a>
+          </div>
+        </div>
+        {% endif %}
+        {% if proveedor.sitio_web %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-globe text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Sitio web</div>
+            <a href="{{ proveedor.sitio_web }}" target="_blank" rel="noopener" class="fw-semibold small">{{ proveedor.sitio_web }}</a>
+          </div>
+        </div>
+        {% endif %}
+        {% if proveedor.direccion %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <i class="fas fa-map-marker-alt text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Dirección</div>
+            <div class="fw-semibold small">{{ proveedor.direccion }}{% if proveedor.ciudad %}, {{ proveedor.ciudad }}{% endif %}</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2">
+          <i class="fas fa-credit-card text-muted" style="width:16px"></i>
+          <div>
+            <div class="small text-muted">Condición de pago</div>
+            <div class="fw-semibold small">{{ proveedor.get_condicion_pago_display }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if proveedor.notas %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="fas fa-sticky-note me-2"></i>Notas internas</div>
+      <div class="card-body small text-muted">{{ proveedor.notas }}</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-body small text-muted text-center">
+        Registrado el {{ proveedor.fecha_registro|date:"d/m/Y" }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna derecha: productos suministrados -->
+  <div class="col-12 col-md-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="fas fa-boxes me-2"></i>Productos suministrados</span>
+        <span class="badge bg-secondary">{{ productos.count }}</span>
+      </div>
+      {% if productos %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="d-none d-sm-table-cell">Categoría</th>
+              <th>Stock</th>
+              <th class="d-none d-sm-table-cell">P. Compra</th>
+              <th class="d-none d-sm-table-cell">P. Venta</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for prod in productos %}
+            <tr class="{% if prod.stock_bajo %}table-warning{% endif %}">
+              <td>
+                <div class="fw-semibold small">{{ prod.nombre }}</div>
+                {% if prod.codigo_barras %}
+                  <div class="text-muted" style="font-size:.7rem">{{ prod.codigo_barras }}</div>
+                {% endif %}
+              </td>
+              <td class="d-none d-sm-table-cell small">{{ prod.categoria|default:"—" }}</td>
+              <td>
+                <span class="fw-semibold {% if prod.stock_bajo %}text-danger{% endif %}">{{ prod.stock_actual }}</span>
+                <span class="text-muted small"> {{ prod.get_unidad_medida_display }}</span>
+                {% if prod.stock_bajo %}
+                  <i class="fas fa-exclamation-triangle text-warning ms-1" title="Stock bajo" data-bs-toggle="tooltip"></i>
+                {% endif %}
+              </td>
+              <td class="d-none d-sm-table-cell small">Bs. {{ prod.precio_compra|floatformat:2 }}</td>
+              <td class="d-none d-sm-table-cell small">Bs. {{ prod.precio_venta|floatformat:2 }}</td>
+              <td>
+                <a href="/inventario/productos/{{ prod.pk }}/" class="btn btn-xs btn-outline-primary">
+                  <i class="fas fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted py-5">
+        <i class="fas fa-box-open fa-2x mb-2 d-block opacity-25"></i>
+        Este proveedor no tiene productos activos registrados.
+        <div class="mt-2">
+          <a href="/inventario/productos/nuevo/" class="btn btn-sm btn-outline-success">
+            <i class="fas fa-plus me-1"></i>Agregar producto
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>.btn-xs { padding: .2rem .45rem; font-size: .75rem; }</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

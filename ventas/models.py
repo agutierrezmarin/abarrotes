@@ -59,6 +59,8 @@ class ItemVenta(models.Model):
     cantidad = models.PositiveIntegerField(default=1)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    es_paquete = models.BooleanField(default=False, help_text='True si se vendió como paquete/caja completa')
+    unidades_descontadas = models.PositiveIntegerField(default=0, help_text='Unidades reales descontadas del stock')
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
@@ -70,4 +72,13 @@ class ItemVenta(models.Model):
 
     def save(self, *args, **kwargs):
         self.subtotal = (self.precio_unitario * self.cantidad) - self.descuento
+        if not self.unidades_descontadas:
+            if self.es_paquete and self.producto_id:
+                try:
+                    upq = self.producto.unidades_por_paquete
+                    self.unidades_descontadas = self.cantidad * upq
+                except Exception:
+                    self.unidades_descontadas = self.cantidad
+            else:
+                self.unidades_descontadas = self.cantidad
         super().save(*args, **kwargs)

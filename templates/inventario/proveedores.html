@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block page_title %}Proveedores{% endblock %}
+{% block content %}
+
+<!-- Estadísticas rápidas -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#1a6b3c,#2d9e5f)">
+      <div class="stat-value">{{ total }}</div>
+      <div class="stat-label">Total proveedores</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">
+      <div class="stat-value">{{ activos }}</div>
+      <div class="stat-label">Activos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Barra de herramientas -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-between">
+      <form class="d-flex gap-2 flex-grow-1" method="get">
+        <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm"
+               placeholder="Buscar por nombre, contacto, ciudad...">
+        <select name="activos" class="form-select form-select-sm" style="max-width:140px" onchange="this.form.submit()">
+          <option value="1" {% if solo_activos == '1' %}selected{% endif %}>Solo activos</option>
+          <option value="0" {% if solo_activos == '0' %}selected{% endif %}>Todos</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-search"></i></button>
+      </form>
+      {% if request.user.groups.all.0.name == 'Administrador' or request.user.groups.all.0.name == 'Gerente' or request.user.is_superuser %}
+      <a href="/inventario/proveedores/nuevo/" class="btn btn-sm btn-success text-nowrap">
+        <i class="fas fa-plus me-1"></i>Nuevo Proveedor
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Lista de proveedores -->
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th class="d-none d-md-table-cell">Contacto</th>
+          <th class="d-none d-md-table-cell">Teléfono</th>
+          <th class="d-none d-sm-table-cell">Ciudad</th>
+          <th class="d-none d-sm-table-cell">Pago</th>
+          <th>Productos</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proveedores %}
+        <tr>
+          <td>
+            <a href="/inventario/proveedores/{{ p.pk }}/" class="fw-semibold text-decoration-none text-dark">
+              {{ p.nombre }}
+            </a>
+            {% if p.nit %}<div class="text-muted" style="font-size:.72rem">NIT: {{ p.nit }}</div>{% endif %}
+          </td>
+          <td class="d-none d-md-table-cell">
+            <span class="small">{{ p.contacto|default:"—" }}</span>
+            {% if p.email %}<div><a href="mailto:{{ p.email }}" class="small text-muted">{{ p.email }}</a></div>{% endif %}
+          </td>
+          <td class="d-none d-md-table-cell">
+            <span class="small">{{ p.telefono|default:"—" }}</span>
+            {% if p.celular %}<div class="small text-muted">{{ p.celular }}</div>{% endif %}
+          </td>
+          <td class="d-none d-sm-table-cell small">{{ p.ciudad|default:"—" }}</td>
+          <td class="d-none d-sm-table-cell">
+            <span class="badge bg-light text-dark border" style="font-size:.7rem">{{ p.get_condicion_pago_display }}</span>
+          </td>
+          <td>
+            <span class="badge bg-secondary">{{ p.total_productos }}</span>
+          </td>
+          <td>
+            {% if p.activo %}
+              <span class="badge bg-success-subtle text-success border border-success" style="font-size:.7rem">Activo</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.7rem">Inactivo</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="/inventario/proveedores/{{ p.pk }}/" class="btn btn-xs btn-outline-primary"
+                 title="Ver detalle" data-bs-toggle="tooltip">
+                <i class="fas fa-eye"></i>
+              </a>
+              {% if request.user.groups.all.0.name == 'Administrador' or request.user.groups.all.0.name == 'Gerente' or request.user.is_superuser %}
+              <a href="/inventario/proveedores/{{ p.pk }}/editar/" class="btn btn-xs btn-outline-secondary"
+                 title="Editar" data-bs-toggle="tooltip">
+                <i class="fas fa-edit"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-5">
+            <i class="fas fa-truck fa-2x mb-2 d-block opacity-25"></i>
+            {% if query %}No se encontraron proveedores con "{{ query }}".{% else %}No hay proveedores registrados.{% endif %}
+            {% if request.user.groups.all.0.name == 'Administrador' or request.user.is_superuser %}
+            <div class="mt-2">
+              <a href="/inventario/proveedores/nuevo/" class="btn btn-sm btn-success">
+                <i class="fas fa-plus me-1"></i>Agregar primer proveedor
+              </a>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+.btn-xs { padding: .2rem .45rem; font-size: .75rem; }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

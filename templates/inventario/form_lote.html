@@ -3,21 +3,103 @@
 {% block page_title %}Agregar Lote - {{ producto.nombre }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
+  <div class="col-12 col-md-7">
+
+    {% if producto.tiene_paquete %}
+    <!-- Info del producto fraccionado -->
+    <div class="alert alert-info mb-3">
+      <i class="fas fa-cubes me-2"></i>
+      <strong>{{ producto.nombre }}</strong> maneja fraccionado:
+      1 {{ producto.nombre_paquete }} = <strong>{{ producto.unidades_por_paquete }} unidades</strong>
+      — Precio de compra por {{ producto.nombre_paquete }}: <strong>Bs. {{ producto.precio_compra }}</strong>
+    </div>
+    {% endif %}
+
     <div class="card">
       <div class="card-header"><i class="fas fa-plus-circle me-2"></i>Nuevo Lote de Entrada</div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" id="form-lote">
           {% csrf_token %}
-          {% for field in form %}
-          <div class="mb-3">
-            <label class="form-label fw-semibold">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+
+          {% if producto.tiene_paquete %}
+          <!-- Modo de ingreso: por paquetes o por unidades -->
+          <div class="mb-4 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <label class="fw-semibold small text-uppercase text-muted d-block mb-2">¿Cómo deseas ingresar la cantidad?</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="modo_ingreso" id="modo-paquete" value="paquete" checked>
+                <label class="form-check-label fw-semibold" for="modo-paquete">
+                  <i class="fas fa-box text-primary me-1"></i>Por {{ producto.nombre_paquete }}s recibidos
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="modo_ingreso" id="modo-unidad" value="unidad">
+                <label class="form-check-label fw-semibold" for="modo-unidad">
+                  <i class="fas fa-list-ol text-secondary me-1"></i>Por unidades directamente
+                </label>
+              </div>
+            </div>
+
+            <!-- Ingreso por paquetes -->
+            <div id="seccion-paquetes" class="mt-3">
+              <label class="form-label fw-semibold small">Número de {{ producto.nombre_paquete }}s recibidos</label>
+              <div class="input-group">
+                <input type="number" name="num_paquetes" id="num-paquetes" class="form-control" min="1"
+                       placeholder="Ej: 4">
+                <span class="input-group-text bg-primary text-white">{{ producto.nombre_paquete }}s</span>
+              </div>
+              <input type="hidden" name="ingresar_en_paquetes" id="ingresar-en-paquetes" value="on">
+              <div class="mt-2 alert alert-success py-2 small" id="calculo-unidades" style="display:none">
+                <i class="fas fa-calculator me-1"></i>
+                <span id="num-paquetes-label">0</span> {{ producto.nombre_paquete }}s
+                × {{ producto.unidades_por_paquete }} unidades =
+                <strong><span id="total-unidades">0</span> unidades en total</strong>
+              </div>
+            </div>
+
+            <!-- Ingreso por unidades (oculto por defecto) -->
+            <div id="seccion-unidades" class="mt-3" style="display:none">
+              <label class="form-label fw-semibold small">Cantidad en unidades</label>
+              {{ form.cantidad }}
+            </div>
           </div>
-          {% endfor %}
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">Registrar Lote</button>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">{{ form.cantidad.label }} *</label>
+            {{ form.cantidad }}
+          </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.numero_lote.label }}</label>
+              {{ form.numero_lote }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.precio_compra.label }}</label>
+              {{ form.precio_compra }}
+              {% if producto.tiene_paquete %}
+              <div class="form-text">Precio por {{ producto.nombre_paquete }} (Bs.)</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.fecha_entrada.label }}</label>
+              {{ form.fecha_entrada }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.fecha_vencimiento.label }}</label>
+              {{ form.fecha_vencimiento }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">{{ form.notas.label }}</label>
+              {{ form.notas }}
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-plus me-1"></i>Registrar Entrada
+            </button>
             <a href="/inventario/productos/{{ producto.pk }}/" class="btn btn-outline-secondary">Cancelar</a>
           </div>
         </form>
@@ -27,5 +109,49 @@
 </div>
 {% endblock %}
 {% block extra_css %}
-<style>input,select,textarea{width:100%;padding:.5rem .75rem;border:1px solid #e2e8f0;border-radius:8px;}</style>
+<style>
+input, select, textarea {
+  width: 100%; padding: .5rem .75rem;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #1a6b3c; outline: none; box-shadow: 0 0 0 3px rgba(26,107,60,.1);
+}
+input[type="radio"] { width: auto; }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+{% if producto.tiene_paquete %}
+const UPQ = {{ producto.unidades_por_paquete }};
+
+function toggleModo() {
+  const modo = document.querySelector('[name="modo_ingreso"]:checked')?.value;
+  const secPaq = document.getElementById('seccion-paquetes');
+  const secUnd = document.getElementById('seccion-unidades');
+  const hidPaq = document.getElementById('ingresar-en-paquetes');
+  if (modo === 'paquete') {
+    secPaq.style.display = ''; secUnd.style.display = 'none';
+    hidPaq.value = 'on';
+  } else {
+    secPaq.style.display = 'none'; secUnd.style.display = '';
+    hidPaq.value = '';
+  }
+}
+
+document.querySelectorAll('[name="modo_ingreso"]').forEach(r => r.addEventListener('change', toggleModo));
+
+document.getElementById('num-paquetes').addEventListener('input', function() {
+  const n = parseInt(this.value) || 0;
+  const calculo = document.getElementById('calculo-unidades');
+  if (n > 0) {
+    calculo.style.display = '';
+    document.getElementById('num-paquetes-label').textContent = n;
+    document.getElementById('total-unidades').textContent = n * UPQ;
+  } else {
+    calculo.style.display = 'none';
+  }
+});
+{% endif %}
+</script>
 {% endblock %}

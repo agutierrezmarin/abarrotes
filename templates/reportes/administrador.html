@@ -3,21 +3,21 @@
 {% block page_title %}Reporte de Administrador{% endblock %}
 {% block content %}
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="card"><div class="card-body text-center">
       <div class="text-muted small mb-1">HOY</div>
       <div style="font-size:1.8rem;font-weight:800;color:#1a6b3c">Bs. {{ resumen_hoy.total|floatformat:2 }}</div>
       <div class="text-muted small">{{ resumen_hoy.ventas }} ventas</div>
     </div></div>
   </div>
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="card"><div class="card-body text-center">
       <div class="text-muted small mb-1">ESTA SEMANA</div>
       <div style="font-size:1.8rem;font-weight:800;color:#3b82f6">Bs. {{ resumen_semana.total|floatformat:2 }}</div>
       <div class="text-muted small">{{ resumen_semana.ventas }} ventas</div>
     </div></div>
   </div>
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="card"><div class="card-body text-center">
       <div class="text-muted small mb-1">ESTE MES</div>
       <div style="font-size:1.8rem;font-weight:800;color:#7c3aed">Bs. {{ resumen_mes.total|floatformat:2 }}</div>

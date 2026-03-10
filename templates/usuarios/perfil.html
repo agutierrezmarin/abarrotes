@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Perfil - {{ usuario.get_full_name|default:usuario.username }}{% endblock %}
+{% block page_title %}{% if es_propio %}Mi Perfil{% else %}Perfil de {{ usuario.username }}{% endif %}{% endblock %}
+{% block content %}
+
+<div class="row g-4">
+  <!-- Columna izquierda: foto y datos básicos -->
+  <div class="col-12 col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <!-- Foto de perfil -->
+        <div class="mb-3">
+          {% if perfil.foto %}
+            <img src="{{ perfil.foto.url }}" alt="Foto de perfil"
+                 class="rounded-circle border border-3 border-success"
+                 style="width:120px;height:120px;object-fit:cover;">
+          {% else %}
+            <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center border border-3 border-success"
+                 style="width:120px;height:120px;font-size:3rem;color:#fff;">
+              {{ usuario.first_name|first|upper|default:usuario.username|first|upper }}
+            </div>
+          {% endif %}
+        </div>
+
+        <h5 class="fw-bold mb-0">{{ usuario.get_full_name|default:usuario.username }}</h5>
+        <small class="text-muted">@{{ usuario.username }}</small>
+
+        <!-- Rol -->
+        <div class="mt-2">
+          {% for g in usuario.groups.all %}
+            <span class="badge bg-success fs-6 px-3 py-2">{{ g.name }}</span>
+          {% empty %}
+            {% if usuario.is_superuser %}
+              <span class="badge bg-danger fs-6 px-3 py-2">Superusuario</span>
+            {% else %}
+              <span class="badge bg-secondary">Sin rol</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <!-- Estado -->
+        <div class="mt-2">
+          {% if usuario.is_active %}
+            <span class="badge bg-success-subtle text-success border border-success">
+              <i class="fas fa-circle me-1" style="font-size:.5rem"></i>Activo
+            </span>
+          {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger">
+              <i class="fas fa-circle me-1" style="font-size:.5rem"></i>Inactivo
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Acciones -->
+        {% if es_propio %}
+        <div class="mt-4 d-grid gap-2">
+          <a href="{% url 'usuarios:editar_perfil' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-edit me-1"></i>Editar Perfil
+          </a>
+          <a href="{% url 'usuarios:cambiar_password' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-key me-1"></i>Cambiar Contraseña
+          </a>
+        </div>
+        {% else %}
+        <div class="mt-4 d-grid gap-2">
+          <a href="{% url 'usuarios:editar' usuario.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-edit me-1"></i>Editar Cuenta
+          </a>
+          <a href="{% url 'usuarios:lista' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver a lista
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    {% if perfil.edad or perfil.antiguedad_años is not None %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold text-muted small text-uppercase mb-3">Datos rápidos</h6>
+        {% if perfil.edad %}
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted small"><i class="fas fa-birthday-cake me-2 text-primary"></i>Edad</span>
+          <span class="fw-semibold small">{{ perfil.edad }} años</span>
+        </div>
+        {% endif %}
+        {% if perfil.antiguedad_años is not None %}
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted small"><i class="fas fa-briefcase me-2 text-success"></i>Antigüedad</span>
+          <span class="fw-semibold small">
+            {% if perfil.antiguedad_años == 0 %}Menos de 1 año
+            {% elif perfil.antiguedad_años == 1 %}1 año
+            {% else %}{{ perfil.antiguedad_años }} años{% endif %}
+          </span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Columna derecha: información detallada -->
+  <div class="col-12 col-md-8">
+    <!-- Información de contacto -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-address-card me-2 text-primary"></i>Información de Contacto
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-primary bg-opacity-10 p-2 text-primary" style="min-width:38px;text-align:center">
+                <i class="fas fa-envelope"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">Correo</div>
+                <div class="fw-semibold small">{{ usuario.email|default:"No registrado" }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-success bg-opacity-10 p-2 text-success" style="min-width:38px;text-align:center">
+                <i class="fas fa-phone"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">Teléfono</div>
+                <div class="fw-semibold small">{{ perfil.telefono|default:"No registrado" }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-warning bg-opacity-10 p-2 text-warning" style="min-width:38px;text-align:center">
+                <i class="fas fa-map-marker-alt"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">Dirección</div>
+                <div class="fw-semibold small">{{ perfil.direccion|default:"No registrada" }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información laboral -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-id-badge me-2 text-success"></i>Información Laboral
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-info bg-opacity-10 p-2 text-info" style="min-width:38px;text-align:center">
+                <i class="fas fa-id-card"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">N° de empleado</div>
+                <div class="fw-semibold small">{{ perfil.numero_empleado|default:"No asignado" }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-purple bg-opacity-10 p-2" style="min-width:38px;text-align:center;color:#7c3aed">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">Fecha de ingreso</div>
+                <div class="fw-semibold small">
+                  {% if perfil.fecha_ingreso %}
+                    {{ perfil.fecha_ingreso|date:"d/m/Y" }}
+                  {% else %}
+                    No registrada
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-danger bg-opacity-10 p-2 text-danger" style="min-width:38px;text-align:center">
+                <i class="fas fa-birthday-cake"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">Fecha de nacimiento</div>
+                <div class="fw-semibold small">
+                  {% if perfil.fecha_nacimiento %}
+                    {{ perfil.fecha_nacimiento|date:"d/m/Y" }}
+                    {% if perfil.edad %}<span class="text-muted">({{ perfil.edad }} años)</span>{% endif %}
+                  {% else %}
+                    No registrada
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-circle bg-secondary bg-opacity-10 p-2 text-secondary" style="min-width:38px;text-align:center">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">En el sistema desde</div>
+                <div class="fw-semibold small">{{ usuario.date_joined|date:"d/m/Y" }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio -->
+    {% if perfil.bio %}
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-user me-2 text-secondary"></i>Acerca de mí
+      </div>
+      <div class="card-body">
+        <p class="mb-0 text-secondary">{{ perfil.bio }}</p>
+      </div>
+    </div>
+    {% elif es_propio %}
+    <div class="card border-dashed" style="border: 2px dashed #e2e8f0 !important;">
+      <div class="card-body text-center text-muted py-4">
+        <i class="fas fa-pen fa-2x mb-2 d-block opacity-25"></i>
+        <p class="mb-2 small">Aún no has agregado una descripción sobre ti.</p>
+        <a href="{% url 'usuarios:editar_perfil' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-edit me-1"></i>Agregar descripción
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

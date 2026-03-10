@@ -1,49 +1,267 @@
 {% extends "base.html" %}
 {% block title %}Productos{% endblock %}
 {% block page_title %}Productos en Inventario{% endblock %}
+{% block extra_css %}
+<style>
+.filter-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .75rem; padding: .25rem .65rem; border-radius: 20px;
+  background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+}
+.filter-chip a { color: inherit; text-decoration: none; font-weight: 700; }
+.filter-chip a:hover { color: #ef4444; }
+.btn-xs { padding: .2rem .45rem; font-size: .75rem; }
+.estado-badge { font-size: .68rem; padding: .2em .5em; border-radius: 4px; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <form class="d-flex gap-2" method="get">
-    <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Buscar producto..." style="min-width:200px">
-    <select name="categoria" class="form-select" style="min-width:150px">
-      <option value="">Todas las categorias</option>
-      {% for c in categorias %}<option value="{{ c.pk }}" {% if categoria_sel == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
-    </select>
-    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-  </form>
-  <a href="/inventario/productos/nuevo/" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nuevo Producto</a>
+
+<!-- Barra de filtros -->
+<div class="card mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="get" id="form-filtros">
+      <div class="row g-2 align-items-end">
+
+        <!-- Búsqueda por texto -->
+        <div class="col-12 col-md-4">
+          <label class="form-label small fw-semibold mb-1">Buscar</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" name="q" id="input-q" value="{{ query }}"
+                   class="form-control border-start-0"
+                   placeholder="Nombre, código de barras...">
+            {% if query %}
+            <button type="button" class="btn btn-outline-secondary" onclick="limpiarCampo('input-q')">
+              <i class="fas fa-times"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Categoría -->
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Categoría</label>
+          <select name="categoria" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Todas</option>
+            {% for c in categorias %}
+            <option value="{{ c.pk }}" {% if categoria_sel == c.pk|stringformat:"s" %}selected{% endif %}>
+              {{ c.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Proveedor -->
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Proveedor</label>
+          <select name="proveedor" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Todos</option>
+            {% for pv in proveedores %}
+            <option value="{{ pv.pk }}" {% if proveedor_sel == pv.pk|stringformat:"s" %}selected{% endif %}>
+              {{ pv.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Estado -->
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Estado</label>
+          <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="activo"   {% if estado == 'activo' %}selected{% endif %}>Solo activos</option>
+            <option value="inactivo" {% if estado == 'inactivo' %}selected{% endif %}>Solo inactivos</option>
+            <option value="todos"    {% if estado == 'todos' %}selected{% endif %}>Todos</option>
+          </select>
+        </div>
+
+        <!-- Stock bajo + Botones -->
+        <div class="col-6 col-md-2 d-flex align-items-end gap-2">
+          <div class="form-check form-check-sm mb-1" title="Mostrar solo productos con stock en alerta">
+            <input class="form-check-input" type="checkbox" name="stock_bajo" value="1"
+                   id="chk-stock" {% if stock_bajo == '1' %}checked{% endif %}
+                   onchange="this.form.submit()">
+            <label class="form-check-label small" for="chk-stock">Stock bajo</label>
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary mb-1">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Chips de filtros activos + botón limpiar -->
+      {% if hay_filtros %}
+      <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+        <span class="text-muted small">Filtros activos:</span>
+        {% if query %}
+        <span class="filter-chip">
+          "{{ query }}" <a href="?{% if categoria_sel %}categoria={{ categoria_sel }}&{% endif %}{% if proveedor_sel %}proveedor={{ proveedor_sel }}&{% endif %}estado={{ estado }}{% if stock_bajo %}&stock_bajo=1{% endif %}" title="Quitar">×</a>
+        </span>
+        {% endif %}
+        {% if categoria_sel %}
+        <span class="filter-chip">
+          Cat: {{ categoria_sel }}
+          <a href="?{% if query %}q={{ query }}&{% endif %}{% if proveedor_sel %}proveedor={{ proveedor_sel }}&{% endif %}estado={{ estado }}{% if stock_bajo %}&stock_bajo=1{% endif %}" title="Quitar">×</a>
+        </span>
+        {% endif %}
+        {% if proveedor_sel %}
+        <span class="filter-chip">
+          Prov: {{ proveedor_sel }}
+          <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_sel %}categoria={{ categoria_sel }}&{% endif %}estado={{ estado }}{% if stock_bajo %}&stock_bajo=1{% endif %}" title="Quitar">×</a>
+        </span>
+        {% endif %}
+        {% if estado != 'activo' %}
+        <span class="filter-chip">Estado: {{ estado }}</span>
+        {% endif %}
+        {% if stock_bajo == '1' %}
+        <span class="filter-chip">⚠️ Stock bajo</span>
+        {% endif %}
+        <a href="/inventario/productos/" class="btn btn-xs btn-outline-secondary">
+          <i class="fas fa-times me-1"></i>Limpiar todo
+        </a>
+      </div>
+      {% endif %}
+    </form>
+  </div>
 </div>
+
+<!-- Encabezado resultados + botón nuevo -->
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <div class="small text-muted">
+    {% if productos|length == 0 %}
+      Sin resultados
+    {% elif productos|length == 1 %}
+      1 producto encontrado
+    {% else %}
+      {{ productos|length }} productos encontrados
+    {% endif %}
+    {% if total_activos and not hay_filtros %}
+      <span class="text-muted"> · {{ total_activos }} activos en total</span>
+    {% endif %}
+  </div>
+  {% if request.user.groups.all.0.name == 'Administrador' or request.user.groups.all.0.name == 'Gerente' or request.user.is_superuser %}
+  <a href="/inventario/productos/nuevo/" class="btn btn-sm btn-success">
+    <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Nuevo Producto</span><span class="d-sm-none">Nuevo</span>
+  </a>
+  {% endif %}
+</div>
+
+<!-- Tabla de productos -->
 <div class="card">
   <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Codigo</th><th>Nombre</th><th>Categoria</th><th>Stock</th><th>P. Compra</th><th>P. Venta</th><th>Margen</th><th>Acciones</th></tr></thead>
+    <table class="table table-hover mb-0" style="font-size:.875rem">
+      <thead>
+        <tr>
+          <th class="d-none d-md-table-cell">Código</th>
+          <th>Nombre</th>
+          <th class="d-none d-sm-table-cell">Categoría</th>
+          <th>Stock</th>
+          <th class="d-none d-lg-table-cell">P. Compra</th>
+          <th class="d-none d-sm-table-cell">P. Venta</th>
+          <th class="d-none d-md-table-cell">Margen</th>
+          <th class="d-none d-md-table-cell">Estado</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in productos %}
-        <tr>
-          <td><small class="text-muted">{{ p.codigo_barras|default:"-" }}</small></td>
-          <td class="fw-semibold">{{ p.nombre }}</td>
-          <td><span class="badge bg-light text-dark">{{ p.categoria }}</span></td>
+        <tr class="{% if not p.activo %}text-muted{% endif %}">
+          <td class="d-none d-md-table-cell">
+            <small class="text-muted font-monospace">{{ p.codigo_barras|default:"—" }}</small>
+          </td>
+          <td>
+            <a href="/inventario/productos/{{ p.pk }}/" class="fw-semibold text-decoration-none {% if p.activo %}text-dark{% else %}text-secondary{% endif %}">
+              {{ p.nombre }}
+            </a>
+            {% if p.tiene_paquete %}
+              <span class="badge bg-primary-subtle text-primary border border-primary" style="font-size:.62rem;vertical-align:middle">
+                {{ p.nombre_paquete }}
+              </span>
+            {% endif %}
+            <!-- Proveedor visible en mobile donde no hay columna -->
+            {% if p.proveedor %}
+              <div class="d-sm-none text-muted" style="font-size:.72rem">{{ p.proveedor.nombre }}</div>
+            {% endif %}
+          </td>
+          <td class="d-none d-sm-table-cell">
+            {% if p.categoria %}
+              <span class="badge bg-light text-dark border">{{ p.categoria.nombre }}</span>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
           <td>
             {% if p.stock_bajo %}
-              <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ p.stock_actual }}</span>
+              <span class="badge bg-danger" title="Stock mínimo: {{ p.stock_minimo }}">
+                <i class="fas fa-exclamation-triangle me-1"></i>{{ p.stock_actual }}
+              </span>
             {% else %}
               <span class="badge bg-success">{{ p.stock_actual }}</span>
             {% endif %}
-            <small class="text-muted">{{ p.get_unidad_medida_display }}</small>
+            <small class="text-muted d-none d-sm-inline"> {{ p.get_unidad_medida_display }}</small>
           </td>
-          <td>Bs. {{ p.precio_compra|floatformat:2 }}</td>
-          <td class="fw-semibold">Bs. {{ p.precio_venta|floatformat:2 }}</td>
-          <td><span class="badge {% if p.margen_ganancia > 20 %}bg-success{% else %}bg-warning{% endif %}">{{ p.margen_ganancia|floatformat:1 }}%</span></td>
+          <td class="d-none d-lg-table-cell">Bs. {{ p.precio_compra|floatformat:2 }}</td>
+          <td class="d-none d-sm-table-cell fw-semibold">Bs. {{ p.precio_venta|floatformat:2 }}</td>
+          <td class="d-none d-md-table-cell">
+            <span class="badge {% if p.margen_ganancia > 20 %}bg-success{% elif p.margen_ganancia > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+              {{ p.margen_ganancia|floatformat:1 }}%
+            </span>
+          </td>
+          <td class="d-none d-md-table-cell">
+            {% if p.activo %}
+              <span class="estado-badge bg-success-subtle text-success border border-success">Activo</span>
+            {% else %}
+              <span class="estado-badge bg-secondary-subtle text-secondary border">Inactivo</span>
+            {% endif %}
+          </td>
           <td>
-            <a href="/inventario/productos/{{ p.pk }}/" class="btn btn-xs btn-outline-primary btn-sm me-1">Ver</a>
-            <a href="/inventario/productos/{{ p.pk }}/editar/" class="btn btn-xs btn-outline-secondary btn-sm">Editar</a>
+            <div class="d-flex gap-1">
+              <a href="/inventario/productos/{{ p.pk }}/" class="btn btn-xs btn-outline-primary" title="Ver detalle">
+                <i class="fas fa-eye"></i>
+              </a>
+              {% if request.user.groups.all.0.name == 'Administrador' or request.user.groups.all.0.name == 'Gerente' or request.user.is_superuser %}
+              <a href="/inventario/productos/{{ p.pk }}/editar/" class="btn btn-xs btn-outline-secondary" title="Editar">
+                <i class="fas fa-edit"></i>
+              </a>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <i class="fas fa-box-open fa-2x mb-2 d-block opacity-25"></i>
+            {% if hay_filtros %}
+              No se encontraron productos con los filtros aplicados.
+              <div class="mt-2">
+                <a href="/inventario/productos/" class="btn btn-sm btn-outline-secondary">
+                  <i class="fas fa-times me-1"></i>Quitar filtros
+                </a>
+              </div>
+            {% else %}
+              No hay productos registrados todavía.
+              {% if request.user.groups.all.0.name == 'Administrador' or request.user.is_superuser %}
+              <div class="mt-2">
+                <a href="/inventario/productos/nuevo/" class="btn btn-sm btn-success">
+                  <i class="fas fa-plus me-1"></i>Agregar primer producto
+                </a>
+              </div>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function limpiarCampo(id) {
+  document.getElementById(id).value = '';
+  document.getElementById('form-filtros').submit();
+}
+</script>
 {% endblock %}

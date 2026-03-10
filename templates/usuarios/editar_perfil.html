@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Editar Perfil{% endblock %}
+{% block page_title %}Editar Mi Perfil{% endblock %}
+
+{% block extra_css %}
+<style>
+.section-label {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+  font-weight: 700; color: #94a3b8; margin-bottom: .6rem;
+}
+.field-wrap { margin-bottom: 1rem; }
+.field-wrap .form-label { font-weight: 600; font-size: .83rem; color: #334155; margin-bottom: .3rem; }
+.field-wrap .form-text { font-size: .74rem; color: #64748b; }
+.field-wrap .text-danger { font-size: .74rem; margin-top: .2rem; }
+/* Foto preview */
+#foto-preview { width:90px;height:90px;object-fit:cover;border-radius:50%;border:3px solid #e2e8f0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- ── Datos personales ── -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-user me-2"></i>Datos Personales</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_datos.first_name.label }}</label>
+                {{ form_datos.first_name }}
+                {% if form_datos.first_name.errors %}
+                  <div class="text-danger">{{ form_datos.first_name.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_datos.last_name.label }}</label>
+                {{ form_datos.last_name }}
+                {% if form_datos.last_name.errors %}
+                  <div class="text-danger">{{ form_datos.last_name.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_datos.email.label }}</label>
+                {{ form_datos.email }}
+                {% if form_datos.email.errors %}
+                  <div class="text-danger">{{ form_datos.email.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Fotografía ── -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-camera me-2"></i>Fotografía de Perfil</div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-4 flex-wrap">
+            <!-- Preview actual -->
+            <div class="flex-shrink-0">
+              {% if form_perfil.instance.foto %}
+                <img src="{{ form_perfil.instance.foto.url }}" alt="Foto actual" id="foto-preview">
+              {% else %}
+                <div id="foto-preview" class="d-flex align-items-center justify-content-center"
+                     style="width:90px;height:90px;border-radius:50%;border:3px dashed #e2e8f0;background:#f8fafc">
+                  <i class="fas fa-user fa-2x text-secondary opacity-50"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="flex-grow-1">
+              <div class="field-wrap mb-0">
+                <label class="form-label">
+                  {% if form_perfil.instance.foto %}Cambiar fotografía{% else %}Subir fotografía{% endif %}
+                </label>
+                {{ form_perfil.foto }}
+                <div class="form-text">Formatos: JPG, PNG, WEBP. Máximo recomendado: 2 MB.</div>
+                {% if form_perfil.foto.errors %}
+                  <div class="text-danger">{{ form_perfil.foto.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Contacto ── -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-address-card me-2"></i>Información de Contacto</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_perfil.telefono.label }}</label>
+                {{ form_perfil.telefono }}
+                {% if form_perfil.telefono.errors %}
+                  <div class="text-danger">{{ form_perfil.telefono.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_perfil.fecha_nacimiento.label }}</label>
+                {{ form_perfil.fecha_nacimiento }}
+                <div class="form-text">Formato: día/mes/año. Ej: 15/05/1990</div>
+                {% if form_perfil.fecha_nacimiento.errors %}
+                  <div class="text-danger">{{ form_perfil.fecha_nacimiento.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_perfil.direccion.label }}</label>
+                {{ form_perfil.direccion }}
+                {% if form_perfil.direccion.errors %}
+                  <div class="text-danger">{{ form_perfil.direccion.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Información laboral ── -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-id-badge me-2"></i>Información Laboral</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_perfil.numero_empleado.label }}</label>
+                {{ form_perfil.numero_empleado }}
+                <div class="form-text">Opcional. Código o número asignado por la empresa.</div>
+                {% if form_perfil.numero_empleado.errors %}
+                  <div class="text-danger">{{ form_perfil.numero_empleado.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="field-wrap">
+                <label class="form-label">{{ form_perfil.fecha_ingreso.label }}</label>
+                {{ form_perfil.fecha_ingreso }}
+                <div class="form-text">Fecha en que empezaste a trabajar aquí.</div>
+                {% if form_perfil.fecha_ingreso.errors %}
+                  <div class="text-danger">{{ form_perfil.fecha_ingreso.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Bio ── -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="fas fa-pen me-2"></i>Acerca de mí</div>
+        <div class="card-body">
+          <div class="field-wrap mb-0">
+            {{ form_perfil.bio }}
+            <div class="d-flex justify-content-between mt-1">
+              <div class="form-text">Describe brevemente tu cargo o experiencia.</div>
+              <div class="form-text" id="bio-contador">0 / 500</div>
+            </div>
+            {% if form_perfil.bio.errors %}
+              <div class="text-danger">{{ form_perfil.bio.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i>Guardar Cambios
+        </button>
+        <a href="{% url 'usuarios:mi_perfil' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Contador de caracteres para la bio
+const bioField = document.querySelector('[name="bio"]');
+const bioCount = document.getElementById('bio-contador');
+if (bioField && bioCount) {
+  function updateCount() {
+    bioCount.textContent = bioField.value.length + ' / 500';
+    bioCount.style.color = bioField.value.length > 450 ? '#ef4444' : '#94a3b8';
+  }
+  bioField.addEventListener('input', updateCount);
+  updateCount();
+}
+
+// Preview de foto antes de subir
+const fotoInput = document.querySelector('[name="foto"]');
+if (fotoInput) {
+  fotoInput.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const preview = document.getElementById('foto-preview');
+      if (preview && preview.tagName === 'IMG') {
+        preview.src = e.target.result;
+      } else if (preview) {
+        // Reemplazar el div con una imagen
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.id = 'foto-preview';
+        img.alt = 'Preview';
+        img.style.cssText = 'width:90px;height:90px;object-fit:cover;border-radius:50%;border:3px solid #e2e8f0';
+        preview.replaceWith(img);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+</script>
+{% endblock %}

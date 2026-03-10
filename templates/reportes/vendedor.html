@@ -3,19 +3,19 @@
 {% block page_title %}Mis Ventas del Dia{% endblock %}
 {% block content %}
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="stat-card" style="background: linear-gradient(135deg,#1a6b3c,#2d9e5f)">
       <div class="stat-value">Bs. {{ total_hoy|floatformat:2 }}</div>
       <div class="stat-label">Total vendido hoy</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="stat-card" style="background: linear-gradient(135deg,#3b82f6,#1d4ed8)">
       <div class="stat-value">{{ num_ventas }}</div>
       <div class="stat-label">Tickets hoy</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-12 col-sm-4">
     <div class="stat-card" style="background: linear-gradient(135deg,#7c3aed,#5b21b6)">
       <div class="stat-value">Bs. {{ promedio|floatformat:2 }}</div>
       <div class="stat-label">Promedio por ticket</div>
