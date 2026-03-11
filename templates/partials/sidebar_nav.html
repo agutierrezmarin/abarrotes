@@ -43,8 +43,11 @@
 
   {% if user.groups.all.0.name == 'Administrador' or user.is_superuser %}
   <div class="nav-section">Administración</div>
-  <a href="/usuarios/" class="nav-link {% if '/usuarios/' in request.path %}active{% endif %}">
+  <a href="/usuarios/" class="nav-link {% if '/usuarios/' in request.path and 'mi-perfil' not in request.path %}active{% endif %}">
     <i class="fas fa-users-cog"></i> Gestión de Usuarios
+  </a>
+  <a href="/configuracion/" class="nav-link {% if '/configuracion/' in request.path %}active{% endif %}">
+    <i class="fas fa-sliders-h"></i> Configuración
   </a>
   {% endif %}
 

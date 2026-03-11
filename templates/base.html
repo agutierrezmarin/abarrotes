@@ -1,20 +1,54 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ config_tienda.tema|default:'claro' }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Tienda de Abarrotes{% endblock %}</title>
+  <title>{% block title %}{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}{% endblock %}</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     :root {
-      --primary: #1a6b3c;
-      --primary-dark: #124d2b;
-      --accent: #f59e0b;
+      --primary: {{ config_tienda.color_primary|default:"#1a6b3c" }};
+      --primary-dark: {{ config_tienda.color_primary_dark|default:"#124d2b" }};
+      --accent: {{ config_tienda.color_accent|default:"#f59e0b" }};
       --danger: #dc2626;
       --sidebar-width: 250px;
+      /* Tema claro (por defecto) */
+      --body-bg: #f0f4f8;
+      --card-bg: #ffffff;
+      --topbar-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --input-bg: #ffffff;
     }
-    body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+    /* ── Tema oscuro ── */
+    [data-tema="oscuro"] {
+      --body-bg: #0f172a;
+      --card-bg: #1e293b;
+      --topbar-bg: #1e293b;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --input-bg: #0f172a;
+    }
+    [data-tema="oscuro"] body { color: var(--text-main); }
+    [data-tema="oscuro"] .card { border-color: var(--border-color) !important; }
+    [data-tema="oscuro"] .card, [data-tema="oscuro"] .card-header,
+    [data-tema="oscuro"] .table, [data-tema="oscuro"] .dropdown-menu,
+    [data-tema="oscuro"] .modal-content { background-color: var(--card-bg) !important; color: var(--text-main) !important; }
+    [data-tema="oscuro"] .topbar { background: var(--topbar-bg) !important; border-color: var(--border-color) !important; }
+    [data-tema="oscuro"] .form-control, [data-tema="oscuro"] .form-select { background-color: var(--input-bg); color: var(--text-main); border-color: var(--border-color); }
+    [data-tema="oscuro"] .table { --bs-table-color: var(--text-main); --bs-table-border-color: var(--border-color); }
+    [data-tema="oscuro"] .table th { color: var(--text-muted) !important; }
+    [data-tema="oscuro"] .text-muted { color: var(--text-muted) !important; }
+    [data-tema="oscuro"] .dropdown-item { color: var(--text-main); }
+    [data-tema="oscuro"] .dropdown-item:hover { background: #334155; }
+    [data-tema="oscuro"] hr, [data-tema="oscuro"] .dropdown-divider { border-color: var(--border-color); }
+    [data-tema="oscuro"] .alert { background-color: #1e293b; }
+    [data-tema="oscuro"] .buscar-section, [data-tema="oscuro"] .productos-lista,
+    [data-tema="oscuro"] .ticket-panel, [data-tema="oscuro"] .agregar-panel { background-color: var(--card-bg) !important; border-color: var(--border-color); }
+    body { background: var(--body-bg); font-family: 'Segoe UI', sans-serif; color: var(--text-main); }
 
     /* ── Sidebar (desktop fijo, mobile offcanvas) ── */
     .sidebar {
@@ -103,10 +137,14 @@
 <div class="offcanvas offcanvas-start sidebar d-md-none" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
   <div class="offcanvas-header" style="background: var(--primary); padding: 1.2rem 1rem;">
     <div class="d-flex align-items-center gap-2">
-      <span style="font-size:1.5rem">🛒</span>
+      {% if config_tienda.logo %}
+        <img src="{{ config_tienda.logo.url }}" alt="logo" style="height:32px;object-fit:contain">
+      {% else %}
+        <span style="font-size:1.5rem">🛒</span>
+      {% endif %}
       <div>
-        <h6 class="mb-0 text-white fw-bold" id="sidebarOffcanvasLabel">Abarrotes</h6>
-        <small style="color:rgba(255,255,255,0.6);font-size:0.7rem">Sistema de Gestión</small>
+        <h6 class="mb-0 text-white fw-bold" id="sidebarOffcanvasLabel">{{ config_tienda.nombre_tienda|default:"Abarrotes" }}</h6>
+        <small style="color:rgba(255,255,255,0.6);font-size:0.7rem">{{ config_tienda.slogan|default:"Sistema de Gestión" }}</small>
       </div>
     </div>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
@@ -119,9 +157,13 @@
 <!-- Sidebar fijo para desktop -->
 <div class="sidebar d-none d-md-flex flex-column">
   <div class="sidebar-brand">
-    <div style="font-size:2rem">🛒</div>
-    <h5>Abarrotes</h5>
-    <small>Sistema de Gestión</small>
+    {% if config_tienda.logo %}
+      <img src="{{ config_tienda.logo.url }}" alt="logo" style="max-height:52px;max-width:160px;object-fit:contain;margin-bottom:.4rem">
+    {% else %}
+      <div style="font-size:2rem">🛒</div>
+    {% endif %}
+    <h5>{{ config_tienda.nombre_tienda|default:"Abarrotes" }}</h5>
+    <small>{{ config_tienda.slogan|default:"Sistema de Gestión" }}</small>
   </div>
   {% include "partials/sidebar_nav.html" %}
 </div>

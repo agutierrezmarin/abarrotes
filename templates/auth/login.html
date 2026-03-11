@@ -1,32 +1,39 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iniciar Sesion - Abarrotes</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background: linear-gradient(135deg, #1a6b3c 0%, #124d2b 100%); min-height: 100vh; display:flex; align-items:center; padding: 1rem 0; }
-    .login-card { border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .login-header { background: #1a6b3c; color: white; padding: 2rem; text-align: center; border-radius: 16px 16px 0 0; }
-    .form-control:focus { border-color: #1a6b3c; box-shadow: 0 0 0 0.2rem rgba(26,107,60,0.25); }
-    .btn-login { background: #1a6b3c; border: none; padding: 0.75rem; font-size: 1rem; }
-    .btn-login:hover { background: #124d2b; }
-  </style>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión - {{ config_tienda.nombre_tienda|default:"Abarrotes" }}{% endblock %}
+
+{% block auth_content %}
+<style>
+  body {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+  }
+  .login-card { border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+  .login-header { background: var(--primary); color: white; padding: 2rem; text-align: center; }
+  .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(0,0,0,0.15); }
+  .btn-login { background: var(--primary); border: none; padding: 0.75rem; font-size: 1rem; }
+  .btn-login:hover { background: var(--primary-dark); }
+</style>
+
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-12 col-sm-8 col-md-5">
       <div class="login-card card">
         <div class="login-header">
-          <div style="font-size:3rem">&#x1F6D2;</div>
-          <h3 class="fw-bold mt-2">Tienda de Abarrotes</h3>
-          <p class="mb-0 opacity-75">Sistema de Inventario y Ventas</p>
+          {% if config_tienda.logo %}
+            <img src="{{ config_tienda.logo.url }}" alt="logo"
+                 style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:.75rem;display:block;margin-left:auto;margin-right:auto">
+          {% else %}
+            <div style="font-size:3rem">&#x1F6D2;</div>
+          {% endif %}
+          <h3 class="fw-bold mt-2">{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}</h3>
+          <p class="mb-0 opacity-75">{{ config_tienda.slogan|default:"Sistema de Inventario y Ventas" }}</p>
         </div>
         <div class="card-body p-4">
           {% if form.errors %}
-            <div class="alert alert-danger">Usuario o contrasena incorrectos.</div>
+            <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
           {% endif %}
           <form method="post">
             {% csrf_token %}
@@ -35,11 +42,11 @@
               <input type="text" name="username" class="form-control form-control-lg" autofocus required>
             </div>
             <div class="mb-4">
-              <label class="form-label fw-semibold">Contrasena</label>
+              <label class="form-label fw-semibold">Contraseña</label>
               <input type="password" name="password" class="form-control form-control-lg" required>
             </div>
             <button type="submit" class="btn btn-login btn-primary w-100 rounded-pill">
-              Iniciar Sesion
+              Iniciar Sesión
             </button>
           </form>
         </div>
@@ -47,5 +54,4 @@
     </div>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

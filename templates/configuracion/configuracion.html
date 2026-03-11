@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% block title %}Configuración del Sistema{% endblock %}
+{% block page_title %}Configuración del Sistema{% endblock %}
+
+{% block extra_css %}
+<style>
+.config-section { background:#fff; border-radius:14px; padding:1.5rem; box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:1.5rem; }
+.config-section h6 { font-weight:700; color:#374151; border-bottom:2px solid #f0f4f8; padding-bottom:.6rem; margin-bottom:1.2rem; }
+.preset-card { border:2px solid #e2e8f0; border-radius:10px; padding:.75rem 1rem; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:.75rem; }
+.preset-card:hover { border-color: var(--preview-primary, #1a6b3c); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.1); }
+.preset-card.activo { border-color: var(--preview-primary, #1a6b3c); background:#f0fdf4; }
+.preset-dot { width:18px; height:18px; border-radius:50%; flex-shrink:0; }
+.color-swatch { width:36px; height:36px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; transition:.15s; }
+.color-swatch:hover { transform:scale(1.1); }
+.logo-preview { max-height:90px; max-width:200px; object-fit:contain; border-radius:8px; border:1px solid #e2e8f0; }
+.logo-placeholder { width:160px; height:80px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:.85rem; }
+/* Preview sidebar */
+.sidebar-preview { background:var(--preview-dark,#124d2b); border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.2); }
+.sidebar-preview .sp-header { background:var(--preview-primary,#1a6b3c); padding:.75rem 1rem; }
+.sidebar-preview .sp-item { padding:.45rem .85rem; color:rgba(255,255,255,.7); font-size:.8rem; display:flex; align-items:center; gap:.5rem; border-left:2px solid transparent; }
+.sidebar-preview .sp-item.sp-active { color:#fff; background:rgba(255,255,255,.08); border-left-color:var(--preview-accent,#f59e0b); }
+.sidebar-preview .sp-section { padding:.5rem .85rem .1rem; font-size:.6rem; text-transform:uppercase; color:rgba(255,255,255,.35); letter-spacing:.1em; }
+.btn-preview { background:var(--preview-primary,#1a6b3c); color:#fff; border:none; border-radius:8px; padding:.5rem 1rem; font-size:.85rem; font-weight:600; }
+.tema-toggle { display:flex; border:2px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+.tema-toggle label { flex:1; text-align:center; padding:.6rem .5rem; cursor:pointer; font-weight:600; font-size:.9rem; transition:.15s; }
+.tema-toggle input[type=radio] { display:none; }
+.tema-toggle input[type=radio]:checked + label { background:var(--primary,#1a6b3c); color:#fff; }
+/* Dark preview */
+.dark-preview-box { background:#0f172a; color:#e2e8f0; border-radius:12px; padding:1rem; font-size:.8rem; }
+.dark-preview-box .dp-card { background:#1e293b; border-radius:8px; padding:.75rem; margin-top:.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="form-config">
+{% csrf_token %}
+<div class="row g-4">
+
+  <!-- Columna izquierda: formulario -->
+  <div class="col-12 col-lg-7">
+
+    <!-- Identidad de la tienda -->
+    <div class="config-section">
+      <h6><i class="fas fa-store me-2 text-success"></i>Identidad de la Tienda</h6>
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">Nombre de la Tienda</label>
+        <input type="text" name="nombre_tienda" class="form-control" id="inp-nombre"
+               value="{{ config.nombre_tienda }}" maxlength="100" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">Eslogan / Subtítulo</label>
+        <input type="text" name="slogan" class="form-control" id="inp-slogan"
+               value="{{ config.slogan }}" maxlength="200">
+      </div>
+
+      <!-- Logo -->
+      <div class="mb-1">
+        <label class="form-label fw-semibold small">Logo de la Tienda</label>
+      </div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        {% if config.logo %}
+          <img src="{{ config.logo.url }}" class="logo-preview" id="logo-preview-img" alt="Logo">
+        {% else %}
+          <div class="logo-placeholder" id="logo-placeholder">
+            <div class="text-center"><i class="fas fa-image fa-lg mb-1 d-block"></i>Sin logo</div>
+          </div>
+          <img src="" class="logo-preview d-none" id="logo-preview-img" alt="Logo">
+        {% endif %}
+        <div>
+          <label for="logo-input" class="btn btn-outline-primary btn-sm mb-2">
+            <i class="fas fa-upload me-1"></i>Subir logo
+          </label>
+          <input type="file" name="logo" id="logo-input" accept="image/*" class="d-none">
+          <div class="form-text">PNG, JPG, SVG. Recomendado: fondo transparente.</div>
+          {% if config.logo %}
+          <button type="submit" name="action" value="eliminar_logo"
+                  class="btn btn-outline-danger btn-sm d-block mt-1"
+                  onclick="return confirm('¿Eliminar el logo actual?')">
+            <i class="fas fa-trash me-1"></i>Quitar logo
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Paleta de colores -->
+    <div class="config-section">
+      <h6><i class="fas fa-palette me-2 text-primary"></i>Paleta de Colores</h6>
+
+      <!-- Presets -->
+      <p class="text-muted small mb-3">Elige un tema predefinido o personaliza los colores:</p>
+      <div class="row g-2 mb-4" id="presets-container">
+        {% for key, p in presets.items %}
+        <div class="col-6 col-sm-4">
+          <div class="preset-card" data-preset="{{ key }}"
+               data-primary="{{ p.primary }}" data-dark="{{ p.primary_dark }}" data-accent="{{ p.accent }}"
+               onclick="aplicarPreset('{{ key }}', '{{ p.primary }}', '{{ p.primary_dark }}', '{{ p.accent }}')">
+            <div class="d-flex gap-1">
+              <div class="preset-dot" style="background:{{ p.primary }}"></div>
+              <div class="preset-dot" style="background:{{ p.accent }}"></div>
+            </div>
+            <span class="fw-semibold small text-capitalize">{{ key }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pickers personalizados -->
+      <div class="row g-3">
+        <div class="col-12 col-sm-4">
+          <label class="form-label fw-semibold small">Color Primario</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="color" id="picker-primary" value="{{ config.color_primary }}"
+                   class="form-control form-control-color" style="width:50px;height:38px"
+                   oninput="syncColor('primary', this.value)">
+            <input type="text" id="hex-primary" name="color_primary"
+                   value="{{ config.color_primary }}" class="form-control form-control-sm font-monospace"
+                   maxlength="7" oninput="syncHex('primary', this.value)">
+          </div>
+        </div>
+        <div class="col-12 col-sm-4">
+          <label class="form-label fw-semibold small">Color Oscuro (hover)</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="color" id="picker-primary-dark" value="{{ config.color_primary_dark }}"
+                   class="form-control form-control-color" style="width:50px;height:38px"
+                   oninput="syncColor('primary-dark', this.value)">
+            <input type="text" id="hex-primary-dark" name="color_primary_dark"
+                   value="{{ config.color_primary_dark }}" class="form-control form-control-sm font-monospace"
+                   maxlength="7" oninput="syncHex('primary-dark', this.value)">
+          </div>
+        </div>
+        <div class="col-12 col-sm-4">
+          <label class="form-label fw-semibold small">Color de Acento</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="color" id="picker-accent" value="{{ config.color_accent }}"
+                   class="form-control form-control-color" style="width:50px;height:38px"
+                   oninput="syncColor('accent', this.value)">
+            <input type="text" id="hex-accent" name="color_accent"
+                   value="{{ config.color_accent }}" class="form-control form-control-sm font-monospace"
+                   maxlength="7" oninput="syncHex('accent', this.value)">
+          </div>
+        </div>
+      </div>
+      <!-- Campo oculto para preset seleccionado -->
+      <input type="hidden" name="preset" id="preset-seleccionado" value="">
+    </div>
+
+    <!-- Tema claro / oscuro -->
+    <div class="config-section">
+      <h6><i class="fas fa-moon me-2 text-indigo"></i>Tema de Interfaz</h6>
+      <div class="tema-toggle mb-3">
+        <input type="radio" name="tema" id="tema-claro" value="claro"
+               {% if config.tema == 'claro' %}checked{% endif %}
+               onchange="previsualizarTema('claro')">
+        <label for="tema-claro"><i class="fas fa-sun me-2 text-warning"></i>Claro</label>
+        <input type="radio" name="tema" id="tema-oscuro" value="oscuro"
+               {% if config.tema == 'oscuro' %}checked{% endif %}
+               onchange="previsualizarTema('oscuro')">
+        <label for="tema-oscuro"><i class="fas fa-moon me-2"></i>Oscuro</label>
+      </div>
+      <div id="preview-tema-oscuro" class="dark-preview-box {% if config.tema == 'claro' %}d-none{% endif %}">
+        <div class="fw-semibold mb-1"><i class="fas fa-moon me-1"></i>Vista previa modo oscuro</div>
+        <div class="dp-card">
+          <div class="fw-semibold">Tarjeta de ejemplo</div>
+          <div class="text-secondary small">Texto secundario en modo oscuro</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón guardar -->
+    <button type="submit" name="action" value="guardar"
+            class="btn btn-success btn-lg w-100 fw-bold">
+      <i class="fas fa-save me-2"></i>Guardar Configuración
+    </button>
+
+  </div>
+
+  <!-- Columna derecha: preview en vivo -->
+  <div class="col-12 col-lg-5">
+    <div class="config-section sticky-top" style="top:80px">
+      <h6><i class="fas fa-eye me-2 text-secondary"></i>Vista Previa en Vivo</h6>
+
+      <!-- Sidebar preview -->
+      <div class="sidebar-preview mb-3" id="sidebar-preview">
+        <div class="sp-header">
+          <div class="d-flex align-items-center gap-2">
+            <div id="prev-logo-wrap">
+              {% if config.logo %}
+                <img src="{{ config.logo.url }}" style="height:32px;object-fit:contain" id="prev-logo" alt="">
+              {% else %}
+                <span style="font-size:1.5rem">🛒</span>
+              {% endif %}
+            </div>
+            <div>
+              <div class="fw-bold text-white small" id="prev-nombre">{{ config.nombre_tienda }}</div>
+              <div style="color:rgba(255,255,255,.6);font-size:.65rem" id="prev-slogan">{{ config.slogan }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="p-2">
+          <div class="sp-section">Principal</div>
+          <div class="sp-item sp-active"><i class="fas fa-home fa-xs"></i> Inicio</div>
+          <div class="sp-section">Inventario</div>
+          <div class="sp-item"><i class="fas fa-boxes fa-xs"></i> Productos</div>
+          <div class="sp-section">Ventas</div>
+          <div class="sp-item"><i class="fas fa-cash-register fa-xs"></i> Punto de Venta</div>
+        </div>
+      </div>
+
+      <!-- Botón y badge de acento -->
+      <div class="d-flex gap-2 align-items-center mb-2">
+        <button type="button" class="btn-preview" id="prev-btn">Guardar</button>
+        <span class="badge rounded-pill" id="prev-badge"
+              style="background:var(--preview-accent,#f59e0b);color:#000">En proceso</span>
+        <span class="badge rounded-pill bg-success" id="prev-badge-ok">Activo</span>
+      </div>
+
+      <!-- Topbar preview -->
+      <div class="rounded-3 p-2 d-flex align-items-center justify-content-between"
+           style="background:#fff;border:1px solid #e2e8f0;font-size:.8rem">
+        <span class="fw-semibold text-secondary" id="prev-topbar-title">Punto de Venta</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+             style="width:28px;height:28px;font-size:.8rem;background:var(--preview-primary,#1a6b3c)">A</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PRESETS = {{ presets_json|safe }};
+
+// ── Sincronizar preview en vivo ─────────────────────────────────
+function actualizarPreview(primary, dark, accent) {
+  document.documentElement.style.setProperty('--preview-primary', primary);
+  document.documentElement.style.setProperty('--preview-dark',    dark);
+  document.documentElement.style.setProperty('--preview-accent',  accent);
+  document.getElementById('prev-badge').style.background = accent;
+}
+
+// ── Aplicar preset ──────────────────────────────────────────────
+function aplicarPreset(key, primary, dark, accent) {
+  // Actualizar pickers y textos
+  setColor('primary',      primary);
+  setColor('primary-dark', dark);
+  setColor('accent',       accent);
+  // Marcar tarjeta activa
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('activo'));
+  const card = document.querySelector(`.preset-card[data-preset="${key}"]`);
+  if (card) card.classList.add('activo');
+  document.getElementById('preset-seleccionado').value = key;
+  actualizarPreview(primary, dark, accent);
+}
+
+function setColor(key, val) {
+  const picker = document.getElementById(`picker-${key}`);
+  const hex    = document.getElementById(`hex-${key}`);
+  if (picker) picker.value = val;
+  if (hex)    hex.value    = val;
+}
+
+// ── Pickers manuales ────────────────────────────────────────────
+function syncColor(key, val) {
+  document.getElementById(`hex-${key}`).value = val;
+  document.getElementById('preset-seleccionado').value = '';
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('activo'));
+  refrescarPreview();
+}
+
+function syncHex(key, val) {
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById(`picker-${key}`).value = val;
+    document.getElementById('preset-seleccionado').value = '';
+    document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('activo'));
+    refrescarPreview();
+  }
+}
+
+function refrescarPreview() {
+  const p = document.getElementById('hex-primary').value;
+  const d = document.getElementById('hex-primary-dark').value;
+  const a = document.getElementById('hex-accent').value;
+  if (/^#[0-9a-fA-F]{6}$/.test(p) && /^#[0-9a-fA-F]{6}$/.test(a))
+    actualizarPreview(p, d, a);
+}
+
+// ── Nombre y slogan en tiempo real ──────────────────────────────
+document.getElementById('inp-nombre').addEventListener('input', function() {
+  document.getElementById('prev-nombre').textContent = this.value || 'Tienda';
+});
+document.getElementById('inp-slogan').addEventListener('input', function() {
+  document.getElementById('prev-slogan').textContent = this.value;
+});
+
+// ── Preview logo ────────────────────────────────────────────────
+document.getElementById('logo-input').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('logo-preview-img');
+    const ph  = document.getElementById('logo-placeholder');
+    img.src = e.target.result;
+    img.classList.remove('d-none');
+    if (ph) ph.classList.add('d-none');
+    // Actualizar preview sidebar
+    document.getElementById('prev-logo-wrap').innerHTML =
+      `<img src="${e.target.result}" style="height:32px;object-fit:contain" alt="">`;
+  };
+  reader.readAsDataURL(this.files[0]);
+});
+
+// ── Tema oscuro preview ─────────────────────────────────────────
+function previsualizarTema(tema) {
+  const box = document.getElementById('preview-tema-oscuro');
+  if (tema === 'oscuro') box.classList.remove('d-none');
+  else                   box.classList.add('d-none');
+}
+
+// ── Inicializar ─────────────────────────────────────────────────
+actualizarPreview(
+  '{{ config.color_primary }}',
+  '{{ config.color_primary_dark }}',
+  '{{ config.color_accent }}'
+);
+// Marcar preset activo si coincide
+for (const [key, p] of Object.entries(PRESETS)) {
+  if (p.primary === '{{ config.color_primary }}' && p.accent === '{{ config.color_accent }}') {
+    document.querySelector(`.preset-card[data-preset="${key}"]`)?.classList.add('activo');
+    break;
+  }
+}
+</script>
+{% endblock %}
