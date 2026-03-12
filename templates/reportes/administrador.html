@@ -1,12 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Reporte Administrador{% endblock %}
 {% block page_title %}Reporte de Administrador{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Estilos de impresión ── */
+@media print {
+  .sidebar, .topbar, .main-content > .topbar,
+  .btn-exportar-pdf, .d-md-none, #sidebarOffcanvas,
+  .offcanvas-backdrop { display: none !important; }
+
+  .main-content { margin-left: 0 !important; }
+  .page-body { padding: 0 !important; }
+
+  body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+
+  .card { box-shadow: none !important; border: 1px solid #dee2e6 !important; break-inside: avoid; }
+  .card-header { background: #f8f9fa !important; color: #000 !important; }
+  .table th { background: #f8f9fa !important; color: #000 !important; }
+  .badge { border: 1px solid #999; color: #000 !important; background: #eee !important; }
+
+  .print-header { display: block !important; }
+  .print-footer { display: block !important; }
+
+  /* Quitar max-height en tablas para que imprima todo */
+  .table-responsive [style*="max-height"] { max-height: none !important; overflow: visible !important; }
+  [style*="max-height:200px"] { max-height: none !important; }
+}
+@media screen {
+  .print-header, .print-footer { display: none; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
+
+<!-- Cabecera visible solo al imprimir -->
+<div class="print-header mb-4">
+  <div style="display:flex;align-items:center;gap:1rem;border-bottom:2px solid #1a6b3c;padding-bottom:.75rem;margin-bottom:1rem">
+    {% if config_tienda.logo %}
+      <img src="{{ config_tienda.logo.url }}" style="height:50px;object-fit:contain" alt="logo">
+    {% endif %}
+    <div>
+      <div style="font-size:16pt;font-weight:700">{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}</div>
+      <div style="font-size:10pt;color:#555">{{ config_tienda.slogan|default:"Sistema de Gestión" }}</div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="font-size:14pt;font-weight:700">Reporte de Administrador</div>
+      <div style="font-size:9pt;color:#555">Generado: {{ hoy|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Botón exportar -->
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn btn-outline-danger btn-exportar-pdf" onclick="exportarPDF()">
+    <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+  </button>
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-12 col-sm-4">
     <div class="card"><div class="card-body text-center">
       <div class="text-muted small mb-1">HOY</div>
-      <div style="font-size:1.8rem;font-weight:800;color:#1a6b3c">Bs. {{ resumen_hoy.total|floatformat:2 }}</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--primary)">Bs. {{ resumen_hoy.total|floatformat:2 }}</div>
       <div class="text-muted small">{{ resumen_hoy.ventas }} ventas</div>
     </div></div>
   </div>
@@ -25,6 +82,7 @@
     </div></div>
   </div>
 </div>
+
 <div class="row g-3">
   <div class="col-md-6">
     <div class="card">
@@ -51,9 +109,9 @@
   <div class="col-md-6">
     <div class="card mb-3">
       <div class="card-header text-danger"><i class="fas fa-exclamation-circle me-2"></i>Stock Bajo ({{ productos_stock_bajo.count }})</div>
-      <div class="table-responsive" style="max-height:200px;overflow-y:auto">
+      <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>Producto</th><th>Stock</th><th>Minimo</th></tr></thead>
+          <thead><tr><th>Producto</th><th>Stock Actual</th><th>Stock Mínimo</th></tr></thead>
           <tbody>
             {% for p in productos_stock_bajo %}
             <tr><td>{{ p.nombre }}</td><td class="text-danger fw-bold">{{ p.stock_actual }}</td><td>{{ p.stock_minimo }}</td></tr>
@@ -65,14 +123,17 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-header text-warning"><i class="fas fa-calendar-times me-2"></i>Proximos a Vencer (30 dias)</div>
-      <div class="table-responsive" style="max-height:200px;overflow-y:auto">
+      <div class="card-header text-warning"><i class="fas fa-calendar-times me-2"></i>Próximos a Vencer (30 días)</div>
+      <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead><tr><th>Producto</th><th>Lote</th><th>Vence</th></tr></thead>
           <tbody>
             {% for l in lotes_alerta %}
-            <tr><td>{{ l.producto.nombre }}</td><td>{{ l.numero_lote|default:l.pk }}</td>
-            <td><span class="badge {% if l.dias_para_vencer <= 7 %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ l.fecha_vencimiento }}</span></td></tr>
+            <tr>
+              <td>{{ l.producto.nombre }}</td>
+              <td>{{ l.numero_lote|default:l.pk }}</td>
+              <td><span class="badge {% if l.dias_para_vencer <= 7 %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ l.fecha_vencimiento }}</span></td>
+            </tr>
             {% empty %}
             <tr><td colspan="3" class="text-center text-success">Sin alertas.</td></tr>
             {% endfor %}
@@ -82,4 +143,20 @@
     </div>
   </div>
 </div>
+
+<!-- Pie de página visible solo al imprimir -->
+<div class="print-footer mt-4" style="border-top:1px solid #ccc;padding-top:.5rem;font-size:8pt;color:#777;display:flex;justify-content:space-between">
+  <span>{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }} — Reporte de Administrador</span>
+  <span>{{ hoy|date:"d/m/Y" }}</span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportarPDF() {
+  document.title = 'Reporte_Administrador_{{ hoy|date:"d-m-Y" }}';
+  window.print();
+}
+</script>
 {% endblock %}

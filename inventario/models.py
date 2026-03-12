@@ -107,10 +107,24 @@ class Producto(models.Model):
         return self.stock_actual <= self.stock_minimo
 
     @property
+    def precio_compra_unidad(self):
+        """Costo real por unidad. Si tiene paquete: precio_compra / unidades_por_paquete."""
+        if self.tiene_paquete and self.unidades_por_paquete > 0:
+            return self.precio_compra / self.unidades_por_paquete
+        return self.precio_compra
+
+    @property
     def margen_ganancia(self):
-        if self.precio_compra > 0:
-            return ((self.precio_venta - self.precio_compra) / self.precio_compra) * 100
+        """Margen sobre costo unitario real (%)."""
+        costo = self.precio_compra_unidad
+        if costo > 0:
+            return float((self.precio_venta - costo) / costo * 100)
         return 0
+
+    @property
+    def ganancia_por_unidad(self):
+        """Ganancia neta en Bs. por unidad vendida."""
+        return self.precio_venta - self.precio_compra_unidad
 
     @property
     def tiene_paquete(self):

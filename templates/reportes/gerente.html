@@ -1,14 +1,74 @@
 {% extends "base.html" %}
 {% block title %}Reporte Gerente{% endblock %}
 {% block page_title %}Reporte Gerencial - {{ mes|date:"F Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+  .sidebar, .topbar, .main-content > .topbar,
+  .btn-exportar-pdf, .d-md-none, #sidebarOffcanvas,
+  .offcanvas-backdrop { display: none !important; }
+
+  .main-content { margin-left: 0 !important; }
+  .page-body { padding: 0 !important; }
+
+  body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+
+  .card { box-shadow: none !important; border: 1px solid #dee2e6 !important; break-inside: avoid; }
+  .card-header { background: #f8f9fa !important; color: #000 !important; }
+  .table th { background: #f8f9fa !important; color: #000 !important; }
+  .badge { border: 1px solid #999; color: #000 !important; background: #eee !important; }
+  .text-success { color: #166534 !important; }
+  .text-danger  { color: #991b1b !important; }
+
+  .print-header { display: block !important; }
+  .print-footer { display: block !important; }
+
+  [style*="max-height"] { max-height: none !important; overflow: visible !important; }
+
+  /* Segunda página para tabla de ventas diarias */
+  .col-md-6:last-child { break-before: auto; }
+}
+@media screen {
+  .print-header, .print-footer { display: none; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
+
+<!-- Cabecera visible solo al imprimir -->
+<div class="print-header mb-4">
+  <div style="display:flex;align-items:center;gap:1rem;border-bottom:2px solid #1a6b3c;padding-bottom:.75rem;margin-bottom:1rem">
+    {% if config_tienda.logo %}
+      <img src="{{ config_tienda.logo.url }}" style="height:50px;object-fit:contain" alt="logo">
+    {% endif %}
+    <div>
+      <div style="font-size:16pt;font-weight:700">{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}</div>
+      <div style="font-size:10pt;color:#555">{{ config_tienda.slogan|default:"Sistema de Gestión" }}</div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="font-size:14pt;font-weight:700">Reporte Gerencial</div>
+      <div style="font-size:10pt;color:#555">{{ mes|date:"F Y"|capfirst }}</div>
+      <div style="font-size:9pt;color:#777">Generado: {{ hoy|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Botón exportar -->
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn btn-outline-danger btn-exportar-pdf" onclick="exportarPDF()">
+    <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+  </button>
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-12">
     <div class="card">
-      <div class="card-header"><i class="fas fa-users me-2"></i>Rendimiento por Vendedor</div>
+      <div class="card-header"><i class="fas fa-users me-2"></i>Rendimiento por Vendedor — {{ mes|date:"F Y" }}</div>
       <div class="table-responsive">
         <table class="table table-hover mb-0">
-          <thead><tr><th>#</th><th>Vendedor</th><th>Num. Ventas</th><th>Total Vendido</th><th>Promedio</th></tr></thead>
+          <thead><tr><th>#</th><th>Vendedor</th><th>Núm. Ventas</th><th>Total Vendido</th><th>Promedio por Venta</th></tr></thead>
           <tbody>
             {% for v in rendimiento_vendedores %}
             <tr>
@@ -33,6 +93,7 @@
     </div>
   </div>
 </div>
+
 <div class="row g-3">
   <div class="col-md-6">
     <div class="card">
@@ -44,7 +105,7 @@
             {% for p in utilidad_productos %}
             <tr>
               <td><small>{{ p.producto__nombre }}</small></td>
-              <td><small class="text-success">Bs. {{ p.ingresos|floatformat:2 }}</small></td>
+              <td><small class="text-success fw-semibold">Bs. {{ p.ingresos|floatformat:2 }}</small></td>
               <td><small class="text-danger">Bs. {{ p.costo|floatformat:2 }}</small></td>
               <td><small class="fw-bold">Bs. {{ p.utilidad|floatformat:2 }}</small></td>
             </tr>
@@ -59,18 +120,18 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-header"><i class="fas fa-calendar-alt me-2"></i>Ventas Diarias del Mes</div>
-      <div style="max-height:300px;overflow-y:auto">
+      <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>Fecha</th><th>Num. Ventas</th><th>Total</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Núm. Ventas</th><th>Total</th></tr></thead>
           <tbody>
             {% for dia in ventas_por_dia %}
             <tr>
-              <td><small>{{ dia.dia }}</small></td>
+              <td><small>{{ dia.dia|date:"d/m/Y" }}</small></td>
               <td>{{ dia.num }}</td>
               <td class="fw-semibold">Bs. {{ dia.total|floatformat:2 }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="3" class="text-muted text-center">Sin ventas.</td></tr>
+            <tr><td colspan="3" class="text-muted text-center">Sin ventas este mes.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -78,4 +139,20 @@
     </div>
   </div>
 </div>
+
+<!-- Pie de página visible solo al imprimir -->
+<div class="print-footer mt-4" style="border-top:1px solid #ccc;padding-top:.5rem;font-size:8pt;color:#777;display:flex;justify-content:space-between">
+  <span>{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }} — Reporte Gerencial {{ mes|date:"F Y" }}</span>
+  <span>Generado el {{ hoy|date:"d/m/Y" }}</span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportarPDF() {
+  document.title = 'Reporte_Gerencial_{{ mes|date:"m-Y" }}';
+  window.print();
+}
+</script>
 {% endblock %}

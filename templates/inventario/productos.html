@@ -156,9 +156,14 @@
           <th>Nombre</th>
           <th class="d-none d-sm-table-cell">Categoría</th>
           <th>Stock</th>
-          <th class="d-none d-lg-table-cell">P. Compra</th>
-          <th class="d-none d-sm-table-cell">P. Venta</th>
-          <th class="d-none d-md-table-cell">Margen</th>
+          <th class="d-none d-lg-table-cell">
+            Costo/Unidad
+            <i class="fas fa-info-circle text-muted ms-1" style="font-size:.7rem"
+               title="Para productos con paquete: precio de compra ÷ unidades por paquete"></i>
+          </th>
+          <th class="d-none d-sm-table-cell">P. Venta/Unidad</th>
+          <th class="d-none d-md-table-cell">Ganancia/Unidad</th>
+          <th class="d-none d-md-table-cell">Margen Real</th>
           <th class="d-none d-md-table-cell">Estado</th>
           <th></th>
         </tr>
@@ -174,11 +179,11 @@
               {{ p.nombre }}
             </a>
             {% if p.tiene_paquete %}
-              <span class="badge bg-primary-subtle text-primary border border-primary" style="font-size:.62rem;vertical-align:middle">
-                {{ p.nombre_paquete }}
+              <span class="badge bg-primary-subtle text-primary border border-primary" style="font-size:.62rem;vertical-align:middle"
+                    title="{{ p.unidades_por_paquete }} uds. por {{ p.nombre_paquete }}">
+                {{ p.nombre_paquete }} ×{{ p.unidades_por_paquete }}
               </span>
             {% endif %}
-            <!-- Proveedor visible en mobile donde no hay columna -->
             {% if p.proveedor %}
               <div class="d-sm-none text-muted" style="font-size:.72rem">{{ p.proveedor.nombre }}</div>
             {% endif %}
@@ -190,20 +195,55 @@
               <span class="text-muted small">—</span>
             {% endif %}
           </td>
+          <!-- Stock en unidades + paquetes si aplica -->
           <td>
-            {% if p.stock_bajo %}
-              <span class="badge bg-danger" title="Stock mínimo: {{ p.stock_minimo }}">
-                <i class="fas fa-exclamation-triangle me-1"></i>{{ p.stock_actual }}
-              </span>
-            {% else %}
-              <span class="badge bg-success">{{ p.stock_actual }}</span>
+            <div>
+              {% if p.stock_bajo %}
+                <span class="badge bg-danger" title="Alerta: mínimo {{ p.stock_minimo }} {{ p.get_unidad_medida_display }}">
+                  <i class="fas fa-exclamation-triangle me-1"></i>{{ p.stock_actual }}
+                </span>
+              {% else %}
+                <span class="badge bg-success">{{ p.stock_actual }}</span>
+              {% endif %}
+              <small class="text-muted d-none d-sm-inline"> uds.</small>
+            </div>
+            {% if p.tiene_paquete %}
+              <div class="text-muted" style="font-size:.72rem">
+                {{ p.stock_en_paquetes }} {{ p.nombre_paquete }}s
+                {% if p.stock_unidades_sueltas > 0 %}
+                  + {{ p.stock_unidades_sueltas }} sueltas
+                {% endif %}
+              </div>
             {% endif %}
-            <small class="text-muted d-none d-sm-inline"> {{ p.get_unidad_medida_display }}</small>
           </td>
-          <td class="d-none d-lg-table-cell">Bs. {{ p.precio_compra|floatformat:2 }}</td>
-          <td class="d-none d-sm-table-cell fw-semibold">Bs. {{ p.precio_venta|floatformat:2 }}</td>
+          <!-- Costo por unidad real -->
+          <td class="d-none d-lg-table-cell">
+            <span class="fw-semibold">Bs. {{ p.precio_compra_unidad|floatformat:2 }}</span>
+            {% if p.tiene_paquete %}
+              <div class="text-muted" style="font-size:.7rem">
+                {{ p.nombre_paquete }}: Bs. {{ p.precio_compra|floatformat:2 }}
+              </div>
+            {% endif %}
+          </td>
+          <!-- Precio de venta por unidad -->
+          <td class="d-none d-sm-table-cell fw-semibold text-success">
+            Bs. {{ p.precio_venta|floatformat:2 }}
+            {% if p.tiene_paquete and p.precio_venta_paquete %}
+              <div class="text-primary" style="font-size:.7rem;font-weight:600">
+                {{ p.nombre_paquete }}: Bs. {{ p.precio_venta_paquete|floatformat:2 }}
+              </div>
+            {% endif %}
+          </td>
+          <!-- Ganancia neta por unidad -->
           <td class="d-none d-md-table-cell">
-            <span class="badge {% if p.margen_ganancia > 20 %}bg-success{% elif p.margen_ganancia > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+            <span class="fw-bold {% if p.ganancia_por_unidad > 0 %}text-success{% else %}text-danger{% endif %}">
+              Bs. {{ p.ganancia_por_unidad|floatformat:2 }}
+            </span>
+          </td>
+          <!-- Margen real % -->
+          <td class="d-none d-md-table-cell">
+            <span class="badge {% if p.margen_ganancia > 20 %}bg-success{% elif p.margen_ganancia > 10 %}bg-warning text-dark{% elif p.margen_ganancia > 0 %}bg-orange text-dark{% else %}bg-danger{% endif %}"
+                  style="{% if p.margen_ganancia > 0 and p.margen_ganancia <= 10 %}background:#fd7e14!important{% endif %}">
               {{ p.margen_ganancia|floatformat:1 }}%
             </span>
           </td>
@@ -229,7 +269,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9" class="text-center text-muted py-5">
+          <td colspan="10" class="text-center text-muted py-5">
             <i class="fas fa-box-open fa-2x mb-2 d-block opacity-25"></i>
             {% if hay_filtros %}
               No se encontraron productos con los filtros aplicados.
