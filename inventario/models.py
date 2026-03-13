@@ -149,7 +149,7 @@ class LoteProducto(models.Model):
     numero_lote = models.CharField(max_length=50, blank=True)
     cantidad = models.PositiveIntegerField()
     fecha_vencimiento = models.DateField(null=True, blank=True)
-    fecha_entrada = models.DateField(default=timezone.now)
+    fecha_entrada = models.DateField(default=timezone.localdate)
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
     notas = models.TextField(blank=True)
 
