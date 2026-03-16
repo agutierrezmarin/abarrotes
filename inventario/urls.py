@@ -12,6 +12,8 @@ urlpatterns = [
     path('productos/<int:pk>/ajustar/', views.ajustar_stock, name='ajustar_stock'),
     path('productos/<int:pk>/lote/', views.agregar_lote, name='agregar_lote'),
     path('alertas/', views.alertas_vencimiento, name='alertas_vencimiento'),
+    path('alertas/stock/', views.alertas_stock_bajo, name='alertas_stock_bajo'),
+    path('alertas/silenciar/', views.silenciar_alerta, name='silenciar_alerta'),
     # Proveedores
     path('proveedores/', views.lista_proveedores, name='lista_proveedores'),
     path('proveedores/nuevo/', views.crear_proveedor, name='crear_proveedor'),

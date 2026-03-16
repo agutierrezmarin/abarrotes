@@ -486,6 +486,44 @@ input[type="checkbox"] { width: auto !important; }
               </div>
             </div>
 
+            <!-- Caducidad del lote inicial -->
+            <div class="row g-3 mt-1" id="seccion-caducidad">
+              <div class="col-12">
+                <div class="section-title"><i class="fas fa-calendar-times me-1"></i>Fecha de caducidad (opcional)</div>
+                <p class="text-muted small mb-2">Si el stock inicial tiene fecha de vencimiento, regístrala aquí. Se creará automáticamente un lote para este producto.</p>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Número de lote
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Identificador del lote impreso en el empaque. Ej: L2024-001. Déjalo vacío si no tiene."></i>
+                  </label>
+                  {{ form.numero_lote_inicial }}
+                  <div class="form-text">Opcional. Número impreso en el empaque.</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="field-wrap">
+                  <label class="form-label">
+                    Fecha de caducidad
+                    <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip"
+                       title="Fecha en que vence el stock inicial. El sistema generará alertas cuando se acerque."></i>
+                  </label>
+                  {{ form.fecha_vencimiento_inicial }}
+                  {% if form.fecha_vencimiento_inicial.errors %}<div class="field-error">{{ form.fecha_vencimiento_inicial.errors.0 }}</div>{% endif %}
+                  <div class="form-text">Opcional. Genera alerta automática al acercarse al vencimiento.</div>
+                </div>
+              </div>
+              <div id="aviso-caducidad" class="col-12" style="display:none">
+                <div class="alert alert-warning py-2 small">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  <span id="aviso-caducidad-texto"></span>
+                </div>
+              </div>
+            </div>
+            <hr class="my-3">
+
             <!-- Indicador visual stock mínimo -->
             <div id="stock-visual" class="mt-3 p-3 rounded" style="background:#f8fafc;border:1.5px solid #e2e8f0;display:none">
               <div class="section-title"><i class="fas fa-chart-bar me-1"></i>Simulación de alerta</div>
@@ -795,6 +833,11 @@ function generarResumen() {
   }
   items.push({ icon: '📊', label: 'Stock inicial', value: sa + ' unidades' });
   items.push({ icon: '⚠️', label: 'Alerta de stock bajo', value: '≤ ' + sm + ' unidades' });
+  const loteNum = document.querySelector('[name="numero_lote_inicial"]')?.value;
+  const fechaCad = document.querySelector('[name="fecha_vencimiento_inicial"]')?.value;
+  if (fechaCad) {
+    items.push({ icon: '📅', label: 'Fecha de caducidad', value: fechaCad + (loteNum ? ` (Lote: ${loteNum})` : '') });
+  }
 
   const body = document.getElementById('resumen-body');
   body.innerHTML = '<p class="text-muted small mb-3">Revisa la información antes de guardar.</p>' +
@@ -802,6 +845,34 @@ function generarResumen() {
       <span style="font-size:1.3rem;flex-shrink:0">${i.icon}</span>
       <div><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">${i.label}</div>
       <div class="fw-semibold">${i.value}</div></div></div>`).join('');
+}
+
+// ── Caducidad: aviso en tiempo real ──
+function verificarCaducidad() {
+  const input = document.querySelector('[name="fecha_vencimiento_inicial"]');
+  const aviso = document.getElementById('aviso-caducidad');
+  const texto = document.getElementById('aviso-caducidad-texto');
+  if (!input || !input.value) { aviso.style.display = 'none'; return; }
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const fecha = new Date(input.value + 'T00:00:00');
+  const dias = Math.round((fecha - hoy) / 86400000);
+
+  aviso.style.display = '';
+  if (dias < 0) {
+    aviso.className = 'col-12';
+    aviso.querySelector('.alert').className = 'alert alert-danger py-2 small';
+    texto.textContent = `⚠️ Esta fecha ya venció hace ${Math.abs(dias)} día(s). Verifica que sea correcta.`;
+  } else if (dias <= 7) {
+    aviso.querySelector('.alert').className = 'alert alert-danger py-2 small';
+    texto.textContent = `Vence en ${dias} día(s). Producto crítico — se generará alerta inmediata.`;
+  } else if (dias <= 30) {
+    aviso.querySelector('.alert').className = 'alert alert-warning py-2 small';
+    texto.textContent = `Vence en ${dias} día(s). Se mostrará alerta de vencimiento próximo.`;
+  } else {
+    aviso.querySelector('.alert').className = 'alert alert-success py-2 small';
+    texto.textContent = `Vence en ${dias} día(s). Producto vigente.`;
+  }
 }
 
 // ── Listeners ──
@@ -817,6 +888,7 @@ function generarResumen() {
     actualizarPreviewFraccionado();
   });
 });
+document.querySelector('[name="fecha_vencimiento_inicial"]')?.addEventListener('change', verificarCaducidad);
 
 // ── Bootstrap tooltips ──
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el, { placement: 'top', trigger: 'hover' }));

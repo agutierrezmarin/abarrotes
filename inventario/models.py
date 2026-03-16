@@ -189,6 +189,22 @@ class LoteProducto(models.Model):
         return 'vigente'
 
 
+class AlertaSilenciada(models.Model):
+    """Alertas que el usuario ocultó permanentemente o pospuso."""
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='alertas_silenciadas')
+    tipo = models.CharField(max_length=20)       # 'stock' | 'vencimiento'
+    objeto_id = models.IntegerField()             # producto.pk o lote.pk
+    pospuesto_hasta = models.DateField(null=True, blank=True)  # None = permanente
+
+    class Meta:
+        unique_together = ('usuario', 'tipo', 'objeto_id')
+        verbose_name = 'Alerta Silenciada'
+        verbose_name_plural = 'Alertas Silenciadas'
+
+    def __str__(self):
+        return f'{self.usuario} | {self.tipo}:{self.objeto_id}'
+
+
 class MovimientoInventario(models.Model):
     TIPO_CHOICES = [
         ('entrada', 'Entrada'),

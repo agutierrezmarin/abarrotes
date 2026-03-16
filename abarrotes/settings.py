@@ -9,7 +9,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 # ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ["192.168.0.12", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["192.168.0.3", "localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -49,6 +49,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "configuracion.context_processors.config_tienda",
+                "inventario.context_processors.alertas_inventario",
             ],
         },
     },

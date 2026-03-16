@@ -1,57 +1,397 @@
 {% extends "base.html" %}
-{% block title %}Iniciar Sesión - {{ config_tienda.nombre_tienda|default:"Abarrotes" }}{% endblock %}
+{% block title %}Iniciar Sesión — {{ config_tienda.nombre_tienda|default:"Abarrotes" }}{% endblock %}
 
 {% block auth_content %}
+<!-- anime.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
 <style>
-  body {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    padding: 1rem 0;
-  }
-  .login-card { border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
-  .login-header { background: var(--primary); color: white; padding: 2rem; text-align: center; }
-  .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(0,0,0,0.15); }
-  .btn-login { background: var(--primary); border: none; padding: 0.75rem; font-size: 1rem; }
-  .btn-login:hover { background: var(--primary-dark); }
+/* ── Reset de página ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a1628;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* ── Fondo animado con partículas ── */
+#bg-canvas {
+  position: fixed; inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Contenedor principal ── */
+.login-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+/* ── Tarjeta glassmorphism ── */
+.login-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.login-header {
+  padding: 2.25rem 2rem 1.5rem;
+  text-align: center;
+  position: relative;
+}
+.login-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+.logo-ring {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a6b3c, #22c55e);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1rem;
+  box-shadow: 0 0 0 8px rgba(34,197,94,0.12), 0 8px 24px rgba(26,107,60,0.4);
+  font-size: 2rem;
+}
+.login-header h2 {
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin-bottom: .3rem;
+}
+.login-header p {
+  color: rgba(255,255,255,0.5);
+  font-size: .82rem;
+}
+
+/* ── Body del form ── */
+.login-body {
+  padding: 1.75rem 2rem 2rem;
+}
+
+/* ── Alerta de error ── */
+.login-error {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: .83rem;
+  padding: .6rem 1rem;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+
+/* ── Floating label inputs ── */
+.field-group {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+.field-group .field-icon {
+  position: absolute;
+  left: 14px; top: 50%; transform: translateY(-50%);
+  color: rgba(255,255,255,0.3);
+  font-size: .9rem;
+  transition: color .2s;
+  pointer-events: none;
+}
+.field-group input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: .95rem;
+  padding: .85rem 2.8rem .85rem 2.75rem;
+  outline: none;
+  transition: border-color .25s, background .25s, box-shadow .25s;
+  caret-color: #22c55e;
+}
+.field-group input::placeholder { color: rgba(255,255,255,0.3); font-size: .88rem; }
+.field-group input:focus {
+  border-color: rgba(34,197,94,0.6);
+  background: rgba(255,255,255,0.1);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+}
+.field-group input:focus ~ .field-icon,
+.field-group:focus-within .field-icon { color: #22c55e; }
+.field-group input:-webkit-autofill,
+.field-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0d2137 inset !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: rgba(34,197,94,0.5);
+}
+
+/* ── Toggle contraseña ── */
+.toggle-pass {
+  position: absolute;
+  right: 13px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.3);
+  font-size: .9rem; padding: .25rem;
+  transition: color .2s;
+  line-height: 1;
+}
+.toggle-pass:hover { color: #22c55e; }
+
+/* ── Botón de login ── */
+.btn-login {
+  width: 100%;
+  padding: .9rem;
+  background: linear-gradient(135deg, #1a6b3c, #16a34a);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .3px;
+  position: relative;
+  overflow: hidden;
+  transition: transform .15s, box-shadow .2s;
+  box-shadow: 0 4px 20px rgba(26,107,60,0.4);
+  margin-top: .5rem;
+}
+.btn-login::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0; transition: opacity .2s;
+}
+.btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(26,107,60,0.5); }
+.btn-login:hover::before { opacity: 1; }
+.btn-login:active { transform: translateY(0); }
+
+/* ── Ripple ── */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transform: scale(0);
+  animation: ripple-anim .55s linear;
+  pointer-events: none;
+}
+@keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+/* ── Footer ── */
+.login-footer {
+  text-align: center;
+  padding: 0 2rem 1.5rem;
+  color: rgba(255,255,255,0.25);
+  font-size: .72rem;
+}
 </style>
 
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-12 col-sm-8 col-md-5">
-      <div class="login-card card">
-        <div class="login-header">
-          {% if config_tienda.logo %}
-            <img src="{{ config_tienda.logo.url }}" alt="logo"
-                 style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:.75rem;display:block;margin-left:auto;margin-right:auto">
-          {% else %}
-            <div style="font-size:3rem">&#x1F6D2;</div>
-          {% endif %}
-          <h3 class="fw-bold mt-2">{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}</h3>
-          <p class="mb-0 opacity-75">{{ config_tienda.slogan|default:"Sistema de Inventario y Ventas" }}</p>
-        </div>
-        <div class="card-body p-4">
-          {% if form.errors %}
-            <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
-          {% endif %}
-          <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Usuario</label>
-              <input type="text" name="username" class="form-control form-control-lg" autofocus required>
-            </div>
-            <div class="mb-4">
-              <label class="form-label fw-semibold">Contraseña</label>
-              <input type="password" name="password" class="form-control form-control-lg" required>
-            </div>
-            <button type="submit" class="btn btn-login btn-primary w-100 rounded-pill">
-              Iniciar Sesión
-            </button>
-          </form>
-        </div>
+<!-- Canvas para partículas de fondo -->
+<canvas id="bg-canvas"></canvas>
+
+<div class="login-wrapper" id="login-wrapper">
+  <div class="login-card">
+
+    <!-- Header -->
+    <div class="login-header" id="login-header">
+      <div class="logo-ring" id="logo-ring">
+        {% if config_tienda.logo %}
+          <img src="{{ config_tienda.logo.url }}" alt="logo"
+               style="width:48px;height:48px;object-fit:contain;border-radius:50%">
+        {% else %}
+          🛒
+        {% endif %}
       </div>
+      <h2>{{ config_tienda.nombre_tienda|default:"Tienda de Abarrotes" }}</h2>
+      <p>{{ config_tienda.slogan|default:"Sistema de Inventario y Ventas" }}</p>
     </div>
+
+    <!-- Formulario -->
+    <div class="login-body" id="login-body">
+
+      {% if form.errors %}
+      <div class="login-error" id="login-error">
+        <i class="fas fa-exclamation-circle"></i>
+        Usuario o contraseña incorrectos. Inténtalo de nuevo.
+      </div>
+      {% endif %}
+
+      <form method="post" id="login-form">
+        {% csrf_token %}
+
+        <!-- Usuario -->
+        <div class="field-group" id="fg-user">
+          <i class="fas fa-user field-icon"></i>
+          <input type="text" name="username" placeholder="Usuario"
+                 autocomplete="username" autofocus required>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="field-group" id="fg-pass">
+          <i class="fas fa-lock field-icon"></i>
+          <input type="password" name="password" id="pass-input"
+                 placeholder="Contraseña" autocomplete="current-password" required>
+          <button type="button" class="toggle-pass" id="toggle-pass"
+                  title="Mostrar / ocultar contraseña">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+
+        <button type="submit" class="btn-login" id="btn-login">
+          <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      Sistema de gestión &copy; {{ config_tienda.nombre_tienda|default:"Abarrotes" }}
+    </div>
+
   </div>
 </div>
+
+<script>
+// ── Partículas de fondo ──────────────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const particles = Array.from({ length: 55 }, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  r: Math.random() * 1.8 + 0.4,
+  vx: (Math.random() - 0.5) * 0.35,
+  vy: (Math.random() - 0.5) * 0.35,
+  alpha: Math.random() * 0.4 + 0.1,
+}));
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Gradiente de fondo
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, '#0a1628');
+  grad.addColorStop(0.5, '#0d2137');
+  grad.addColorStop(1, '#0a1c10');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Líneas entre partículas cercanas
+  particles.forEach((p, i) => {
+    particles.slice(i + 1).forEach(q => {
+      const dist = Math.hypot(p.x - q.x, p.y - q.y);
+      if (dist < 120) {
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(34,197,94,${0.06 * (1 - dist / 120)})`;
+        ctx.lineWidth = 0.7;
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(q.x, q.y);
+        ctx.stroke();
+      }
+    });
+  });
+
+  // Puntos
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(34,197,94,${p.alpha})`;
+    ctx.fill();
+
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+  });
+
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// ── Animación de entrada con anime.js ───────────────────────────
+anime.timeline({ easing: 'easeOutExpo' })
+  .add({
+    targets: '#login-wrapper',
+    opacity: [0, 1],
+    translateY: [40, 0],
+    duration: 800,
+  })
+  .add({
+    targets: '#logo-ring',
+    scale: [0.5, 1],
+    opacity: [0, 1],
+    duration: 600,
+    offset: '-=500',
+  })
+  .add({
+    targets: ['#login-header h2', '#login-header p'],
+    opacity: [0, 1],
+    translateY: [12, 0],
+    delay: anime.stagger(100),
+    duration: 500,
+    offset: '-=300',
+  })
+  .add({
+    targets: ['#fg-user', '#fg-pass', '#btn-login'],
+    opacity: [0, 1],
+    translateY: [16, 0],
+    delay: anime.stagger(80),
+    duration: 450,
+    offset: '-=200',
+  });
+
+{% if form.errors %}
+// Animar el error si existe
+anime({ targets: '#login-error', opacity: [0,1], translateX: [-8, 0], duration: 400, easing: 'easeOutQuad' });
+// Agitar el logo al tener error
+anime({ targets: '#logo-ring', translateX: [-6,6,-4,4,-2,2,0], duration: 500, easing: 'easeInOutSine' });
+{% endif %}
+
+// ── Toggle contraseña ────────────────────────────────────────────
+document.getElementById('toggle-pass').addEventListener('click', function () {
+  const input = document.getElementById('pass-input');
+  const icon = document.getElementById('eye-icon');
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  icon.className = isPass ? 'fas fa-eye-slash' : 'fas fa-eye';
+  anime({ targets: '#toggle-pass', rotate: [0, 8, -8, 0], duration: 300, easing: 'easeInOutSine' });
+});
+
+// ── Ripple en botón ──────────────────────────────────────────────
+document.getElementById('btn-login').addEventListener('click', function (e) {
+  const btn = this;
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  const size = Math.max(rect.width, rect.height);
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+});
+
+// ── Animación del botón al submit ────────────────────────────────
+document.getElementById('login-form').addEventListener('submit', function () {
+  const btn = document.getElementById('btn-login');
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Verificando...';
+  btn.disabled = true;
+  anime({ targets: btn, scale: [1, 0.97, 1], duration: 300, easing: 'easeInOutSine' });
+});
+</script>
 {% endblock %}

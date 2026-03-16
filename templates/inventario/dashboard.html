@@ -30,29 +30,106 @@
 </div>
 
 {% if alertas %}
-<div class="card mb-4">
+<div class="card mb-4" id="card-alertas">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="fas fa-bell text-warning me-2"></i>Alertas Activas</span>
+    <span><i class="fas fa-bell text-warning me-2"></i>Alertas Activas <span class="badge bg-warning text-dark ms-1" id="contador-alertas">{{ alertas|length }}</span></span>
     <a href="/inventario/alertas/" class="btn btn-sm btn-outline-warning">Ver todas</a>
   </div>
-  <div class="card-body p-0">
+  <div class="card-body p-0" id="lista-alertas">
     {% for alerta in alertas %}
-    <div class="d-flex align-items-center px-4 py-2 border-bottom
+    <div class="alerta-row d-flex align-items-center px-3 py-2 border-bottom
       {% if alerta.nivel == 'critical' %}bg-danger bg-opacity-10
       {% elif alerta.nivel == 'danger' %}bg-warning bg-opacity-10
-      {% else %}bg-warning bg-opacity-5{% endif %}">
+      {% else %}bg-warning bg-opacity-5{% endif %}"
+      data-tipo="{{ alerta.tipo }}" data-id="{{ alerta.objeto_id }}">
       {% if alerta.nivel == 'critical' %}
-        <i class="fas fa-skull-crossbones text-danger me-2"></i>
+        <i class="fas fa-skull-crossbones text-danger me-2 flex-shrink-0"></i>
       {% elif alerta.nivel == 'danger' %}
-        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+        <i class="fas fa-exclamation-triangle text-warning me-2 flex-shrink-0"></i>
       {% else %}
-        <i class="fas fa-info-circle text-info me-2"></i>
+        <i class="fas fa-info-circle text-info me-2 flex-shrink-0"></i>
       {% endif %}
-      <small>{{ alerta.mensaje }}</small>
+      <small class="flex-grow-1">{{ alerta.mensaje }}</small>
+      <div class="dropdown ms-2">
+        <button class="btn btn-sm btn-link text-muted p-0 px-1" type="button"
+          data-bs-toggle="dropdown" title="Opciones de alerta">
+          <i class="fas fa-times"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:180px;font-size:.85rem">
+          <li><h6 class="dropdown-header">Ocultar alerta</h6></li>
+          <li>
+            <button class="dropdown-item btn-silenciar" data-dias="0">
+              <i class="fas fa-eye-slash me-2 text-danger"></i>Ocultar siempre
+            </button>
+          </li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li>
+            <button class="dropdown-item btn-silenciar" data-dias="1">
+              <i class="fas fa-clock me-2 text-secondary"></i>Recordar mañana
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item btn-silenciar" data-dias="3">
+              <i class="fas fa-clock me-2 text-secondary"></i>Recordar en 3 días
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item btn-silenciar" data-dias="7">
+              <i class="fas fa-clock me-2 text-secondary"></i>Recordar en 7 días
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
     {% endfor %}
   </div>
 </div>
+
+<script>
+(function () {
+  const CSRF = '{{ csrf_token }}';
+  const URL_SILENCIAR = '/inventario/alertas/silenciar/';
+
+  document.getElementById('lista-alertas').addEventListener('click', function (e) {
+    const btn = e.target.closest('.btn-silenciar');
+    if (!btn) return;
+
+    const row = btn.closest('.alerta-row');
+    const tipo = row.dataset.tipo;
+    const objetoId = row.dataset.id;
+    const dias = btn.dataset.dias;
+
+    btn.closest('.dropdown-menu').previousElementSibling.disabled = true;
+
+    fetch(URL_SILENCIAR, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `tipo=${tipo}&objeto_id=${objetoId}&dias=${dias}`,
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      row.style.transition = 'opacity .3s, max-height .4s';
+      row.style.overflow = 'hidden';
+      row.style.maxHeight = row.offsetHeight + 'px';
+      requestAnimationFrame(() => {
+        row.style.opacity = '0';
+        row.style.maxHeight = '0';
+        row.style.paddingTop = '0';
+        row.style.paddingBottom = '0';
+      });
+      setTimeout(() => {
+        row.remove();
+        const restantes = document.querySelectorAll('.alerta-row').length;
+        document.getElementById('contador-alertas').textContent = restantes;
+        if (restantes === 0) {
+          document.getElementById('card-alertas').remove();
+        }
+      }, 420);
+    });
+  });
+})();
+</script>
 {% endif %}
 
 <div class="card">

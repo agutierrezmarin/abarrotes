@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Alertas de Stock Bajo{% endblock %}
+{% block page_title %}Alertas de Stock Bajo{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    {% if total > 0 %}
+      <span class="badge bg-danger" style="font-size:.85rem;padding:.4em .8em">
+        <i class="fas fa-exclamation-circle me-1"></i>{{ total }} producto{{ total|pluralize:"s" }} con stock bajo
+      </span>
+    {% else %}
+      <span class="badge bg-success" style="font-size:.85rem;padding:.4em .8em">
+        <i class="fas fa-check-circle me-1"></i>Sin alertas de stock
+      </span>
+    {% endif %}
+  </div>
+  <a href="/inventario/productos/" class="btn btn-sm btn-outline-primary">
+    <i class="fas fa-boxes me-1"></i>Ver todos los productos
+  </a>
+</div>
+
+{% if productos %}
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="fas fa-exclamation-triangle text-warning"></i>
+    Productos que necesitan reabastecimiento
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Proveedor</th>
+          <th class="text-center">Stock actual</th>
+          <th class="text-center">Stock mínimo</th>
+          <th class="text-center">Déficit</th>
+          <th class="text-center">Nivel</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ p.nombre }}</div>
+            {% if p.codigo_barras %}
+              <small class="text-muted">{{ p.codigo_barras }}</small>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-light text-dark">{{ p.categoria|default:"—" }}</span>
+          </td>
+          <td class="text-muted small">{{ p.proveedor|default:"—" }}</td>
+          <td class="text-center">
+            {% if p.stock_actual == 0 %}
+              <span class="badge bg-danger">SIN STOCK</span>
+            {% else %}
+              <span class="badge bg-warning text-dark fw-bold" style="font-size:.85rem">
+                {{ p.stock_actual }} {{ p.get_unidad_medida_display }}
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-center text-muted">{{ p.stock_minimo }} {{ p.get_unidad_medida_display }}</td>
+          <td class="text-center">
+            {% if p.stock_minimo > p.stock_actual %}
+              <span class="text-danger fw-bold">
+                -{{ p.stock_minimo|add:"-"|add:p.stock_actual|default:"0" }}
+              </span>
+            {% else %}
+              <span class="text-warning fw-bold">0</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if p.stock_actual == 0 %}
+              <span class="badge bg-danger">Agotado</span>
+            {% elif p.stock_actual <= p.stock_minimo|divisibleby:2 %}
+              <span class="badge bg-danger">Crítico</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Bajo</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="/inventario/productos/{{ p.pk }}/lote/" class="btn btn-sm btn-success" title="Agregar lote">
+                <i class="fas fa-plus me-1"></i>Reabastecer
+              </a>
+              <a href="/inventario/productos/{{ p.pk }}/" class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                <i class="fas fa-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body text-center text-success py-5">
+    <i class="fas fa-check-circle fa-3x mb-3"></i>
+    <h5 class="fw-bold">¡Todo el inventario está en orden!</h5>
+    <p class="text-muted mb-0">No hay productos con stock bajo o agotado.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

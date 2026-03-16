@@ -2,64 +2,53 @@
 {% block title %}Alertas de Vencimiento{% endblock %}
 {% block page_title %}Alertas de Vencimiento{% endblock %}
 {% block content %}
-{% if lotes_vencidos %}
-<div class="card mb-3 border-danger">
-  <div class="card-header bg-danger text-white"><i class="fas fa-skull-crossbones me-2"></i>PRODUCTOS VENCIDOS ({{ lotes_vencidos.count }})</div>
-  <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Fecha Vencimiento</th><th>Dias Vencido</th></tr></thead>
-      <tbody>
-        {% for l in lotes_vencidos %}
-        <tr class="bg-danger bg-opacity-10">
-          <td class="fw-semibold">{{ l.producto.nombre }}</td>
-          <td>{{ l.numero_lote|default:l.pk }}</td>
-          <td>{{ l.cantidad }}</td>
-          <td>{{ l.fecha_vencimiento }}</td>
-          <td><span class="badge bg-danger">{{ l.dias_vencido }} dias</span></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
 
-{% if lotes_criticos %}
-<div class="card mb-3 border-warning">
-  <div class="card-header bg-warning text-dark"><i class="fas fa-exclamation-triangle me-2"></i>VENCEN EN 7 DIAS ({{ lotes_criticos.count }})</div>
-  <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Vencimiento</th><th>Dias Restantes</th></tr></thead>
-      <tbody>
-        {% for l in lotes_criticos %}
-        <tr class="bg-warning bg-opacity-10">
-          <td class="fw-semibold">{{ l.producto.nombre }}</td>
-          <td>{{ l.numero_lote|default:l.pk }}</td>
-          <td>{{ l.cantidad }}</td>
-          <td>{{ l.fecha_vencimiento }}</td>
-          <td><span class="badge bg-warning text-dark">{{ l.dias_para_vencer }} dias</span></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if grupos_vencidos %}
+<div class="card mb-3">
+  <div class="card-header bg-danger text-white d-flex align-items-center justify-content-between">
+    <span><i class="fas fa-skull-crossbones me-2"></i>PRODUCTOS VENCIDOS</span>
+    <span class="badge bg-white text-danger">{{ total_vencidos }} producto{{ total_vencidos|pluralize:"s" }}</span>
   </div>
-</div>
-{% endif %}
-
-{% if lotes_proximos %}
-<div class="card border-info">
-  <div class="card-header bg-info text-white"><i class="fas fa-clock me-2"></i>VENCEN EN 30 DIAS ({{ lotes_proximos.count }})</div>
   <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Producto</th><th>Lote</th><th>Cantidad</th><th>Vencimiento</th><th>Dias Restantes</th></tr></thead>
-      <tbody>
-        {% for l in lotes_proximos %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
         <tr>
-          <td class="fw-semibold">{{ l.producto.nombre }}</td>
-          <td>{{ l.numero_lote|default:l.pk }}</td>
-          <td>{{ l.cantidad }}</td>
-          <td>{{ l.fecha_vencimiento }}</td>
-          <td><span class="badge bg-info">{{ l.dias_para_vencer }} dias</span></td>
+          <th>Producto</th>
+          <th class="text-center">Lotes</th>
+          <th class="text-center">Unidades afectadas</th>
+          <th class="text-center">Fecha más antigua</th>
+          <th class="text-center">Días vencido</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grupos_vencidos %}
+        <tr class="bg-danger bg-opacity-10">
+          <td>
+            <div class="fw-semibold">{{ g.producto.nombre }}</div>
+            {% if g.num_lotes > 1 %}
+              <small class="text-muted">
+                Lotes: {% for l in g.lotes %}{{ l.numero_lote|default:l.pk }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </small>
+            {% else %}
+              <small class="text-muted">Lote: {{ g.lotes.0.numero_lote|default:g.lotes.0.pk }}</small>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-danger">{{ g.num_lotes }}</span>
+          </td>
+          <td class="text-center fw-semibold">{{ g.cantidad_total }}</td>
+          <td class="text-center">{{ g.fecha_mas_critica }}</td>
+          <td class="text-center">
+            {% with dias=g.lotes.0.dias_vencido %}
+              <span class="badge bg-danger">{{ dias }} día{{ dias|pluralize:"s" }}</span>
+            {% endwith %}
+          </td>
+          <td>
+            <a href="/inventario/productos/{{ g.producto.pk }}/" class="btn btn-sm btn-outline-danger">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -68,10 +57,120 @@
 </div>
 {% endif %}
 
-{% if not lotes_vencidos and not lotes_criticos and not lotes_proximos %}
-<div class="card"><div class="card-body text-center text-success py-5">
-  <i class="fas fa-check-circle fa-3x mb-3"></i>
-  <h5>Todo en orden. No hay alertas de vencimiento.</h5>
-</div></div>
+{% if grupos_criticos %}
+<div class="card mb-3">
+  <div class="card-header bg-warning text-dark d-flex align-items-center justify-content-between">
+    <span><i class="fas fa-exclamation-triangle me-2"></i>VENCEN EN LOS PRÓXIMOS 7 DÍAS</span>
+    <span class="badge bg-dark text-warning">{{ total_criticos }} producto{{ total_criticos|pluralize:"s" }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="text-center">Lotes</th>
+          <th class="text-center">Unidades afectadas</th>
+          <th class="text-center">Fecha más próxima</th>
+          <th class="text-center">Días restantes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grupos_criticos %}
+        <tr class="bg-warning bg-opacity-10">
+          <td>
+            <div class="fw-semibold">{{ g.producto.nombre }}</div>
+            {% if g.num_lotes > 1 %}
+              <small class="text-muted">
+                Lotes: {% for l in g.lotes %}{{ l.numero_lote|default:l.pk }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </small>
+            {% else %}
+              <small class="text-muted">Lote: {{ g.lotes.0.numero_lote|default:g.lotes.0.pk }}</small>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-warning text-dark">{{ g.num_lotes }}</span>
+          </td>
+          <td class="text-center fw-semibold">{{ g.cantidad_total }}</td>
+          <td class="text-center">{{ g.fecha_mas_critica }}</td>
+          <td class="text-center">
+            {% with dias=g.lotes.0.dias_para_vencer %}
+              <span class="badge bg-warning text-dark">{{ dias }} día{{ dias|pluralize:"s" }}</span>
+            {% endwith %}
+          </td>
+          <td>
+            <a href="/inventario/productos/{{ g.producto.pk }}/" class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if grupos_proximos %}
+<div class="card mb-3">
+  <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
+    <span><i class="fas fa-clock me-2"></i>VENCEN EN LOS PRÓXIMOS 30 DÍAS</span>
+    <span class="badge bg-white text-info">{{ total_proximos }} producto{{ total_proximos|pluralize:"s" }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="text-center">Lotes</th>
+          <th class="text-center">Unidades afectadas</th>
+          <th class="text-center">Fecha más próxima</th>
+          <th class="text-center">Días restantes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grupos_proximos %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ g.producto.nombre }}</div>
+            {% if g.num_lotes > 1 %}
+              <small class="text-muted">
+                Lotes: {% for l in g.lotes %}{{ l.numero_lote|default:l.pk }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </small>
+            {% else %}
+              <small class="text-muted">Lote: {{ g.lotes.0.numero_lote|default:g.lotes.0.pk }}</small>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-info">{{ g.num_lotes }}</span>
+          </td>
+          <td class="text-center fw-semibold">{{ g.cantidad_total }}</td>
+          <td class="text-center">{{ g.fecha_mas_critica }}</td>
+          <td class="text-center">
+            {% with dias=g.lotes.0.dias_para_vencer %}
+              <span class="badge bg-info">{{ dias }} día{{ dias|pluralize:"s" }}</span>
+            {% endwith %}
+          </td>
+          <td>
+            <a href="/inventario/productos/{{ g.producto.pk }}/" class="btn btn-sm btn-outline-info">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not grupos_vencidos and not grupos_criticos and not grupos_proximos %}
+<div class="card">
+  <div class="card-body text-center text-success py-5">
+    <i class="fas fa-check-circle fa-3x mb-3"></i>
+    <h5>Todo en orden. No hay alertas de vencimiento.</h5>
+  </div>
+</div>
 {% endif %}
 {% endblock %}

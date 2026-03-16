@@ -3,8 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
-from datetime import timedelta
-from .models import Producto, Categoria, Proveedor, LoteProducto, MovimientoInventario
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from datetime import timedelta, date
+from .models import Producto, Categoria, Proveedor, LoteProducto, MovimientoInventario, AlertaSilenciada
 from .forms import ProductoForm, LoteForm, AjusteStockForm, ProveedorForm
 
 
@@ -12,11 +14,30 @@ from .forms import ProductoForm, LoteForm, AjusteStockForm, ProveedorForm
 def dashboard_inventario(request):
     productos = Producto.objects.filter(activo=True).select_related('categoria')
     alertas = []
+    hoy_dashboard = timezone.localdate()
+
+    # IDs silenciados por este usuario (permanente o que aún no se deben mostrar)
+    silenciadas = AlertaSilenciada.objects.filter(
+        usuario=request.user
+    ).values('tipo', 'objeto_id', 'pospuesto_hasta')
+    silenciadas_map = {
+        (s['tipo'], s['objeto_id']): s['pospuesto_hasta']
+        for s in silenciadas
+    }
+
+    def _silenciada(tipo, objeto_id):
+        key = (tipo, objeto_id)
+        if key not in silenciadas_map:
+            return False
+        pospuesto = silenciadas_map[key]
+        if pospuesto is None:
+            return True           # permanente
+        return hoy_dashboard < pospuesto  # pospuesta y aún no ha llegado la fecha
 
     # Alertas de stock bajo
     for p in productos:
-        if p.stock_bajo:
-            alertas.append({'tipo': 'stock', 'nivel': 'warning', 'mensaje': f'Stock bajo: {p.nombre} ({p.stock_actual} {p.get_unidad_medida_display()})'})
+        if p.stock_bajo and not _silenciada('stock', p.pk):
+            alertas.append({'tipo': 'stock', 'objeto_id': p.pk, 'nivel': 'warning', 'mensaje': f'Stock bajo: {p.nombre} ({p.stock_actual} {p.get_unidad_medida_display()})'})
 
     # Alertas de vencimiento
     hoy = timezone.localdate()
@@ -27,9 +48,11 @@ def dashboard_inventario(request):
     lotes_vencidos = LoteProducto.objects.filter(fecha_vencimiento__lt=hoy).select_related('producto')
 
     for lote in lotes_criticos:
-        alertas.append({'tipo': 'vencimiento', 'nivel': 'danger', 'mensaje': f'Por vencer: {lote.producto.nombre} - Lote {lote.numero_lote or lote.pk} vence el {lote.fecha_vencimiento}'})
+        if not _silenciada('vencimiento', lote.pk):
+            alertas.append({'tipo': 'vencimiento', 'objeto_id': lote.pk, 'nivel': 'danger', 'mensaje': f'Por vencer: {lote.producto.nombre} - Lote {lote.numero_lote or lote.pk} vence el {lote.fecha_vencimiento}'})
     for lote in lotes_vencidos:
-        alertas.append({'tipo': 'vencimiento', 'nivel': 'critical', 'mensaje': f'¡VENCIDO!: {lote.producto.nombre} - Lote {lote.numero_lote or lote.pk} venció el {lote.fecha_vencimiento}'})
+        if not _silenciada('vencimiento', lote.pk):
+            alertas.append({'tipo': 'vencimiento', 'objeto_id': lote.pk, 'nivel': 'critical', 'mensaje': f'¡VENCIDO!: {lote.producto.nombre} - Lote {lote.numero_lote or lote.pk} venció el {lote.fecha_vencimiento}'})
 
     context = {
         'total_productos': productos.count(),
@@ -109,12 +132,20 @@ def crear_producto(request):
         form = ProductoForm(request.POST, request.FILES)
         if form.is_valid():
             producto = form.save()
-            MovimientoInventario.objects.create(
-                producto=producto, tipo='entrada',
-                cantidad=producto.stock_actual, stock_anterior=0,
-                stock_nuevo=producto.stock_actual,
-                motivo='Stock inicial', usuario=request.user
-            )
+            if producto.stock_actual > 0:
+                MovimientoInventario.objects.create(
+                    producto=producto, tipo='entrada',
+                    cantidad=producto.stock_actual, stock_anterior=0,
+                    stock_nuevo=producto.stock_actual,
+                    motivo='Stock inicial', usuario=request.user
+                )
+                LoteProducto.objects.create(
+                    producto=producto,
+                    numero_lote=form.cleaned_data.get('numero_lote_inicial') or '',
+                    cantidad=producto.stock_actual,
+                    fecha_vencimiento=form.cleaned_data.get('fecha_vencimiento_inicial'),
+                    precio_compra=producto.precio_compra,
+                )
             messages.success(request, f'Producto "{producto.nombre}" creado correctamente.')
             return redirect('inventario:detalle_producto', pk=producto.pk)
     else:
@@ -209,21 +240,97 @@ def agregar_lote(request, pk):
 
 
 @login_required
+def alertas_stock_bajo(request):
+    from django.db.models import F
+    productos = (
+        Producto.objects
+        .filter(activo=True, stock_actual__lte=F('stock_minimo'))
+        .select_related('categoria', 'proveedor')
+        .order_by('stock_actual')
+    )
+    return render(request, 'inventario/alertas_stock_bajo.html', {
+        'productos': productos,
+        'total': productos.count(),
+    })
+
+
+def _agrupar_lotes_por_producto(queryset):
+    """
+    Agrupa lotes por producto. Por cada producto devuelve un dict con:
+    - producto: instancia del modelo
+    - lotes: lista de lotes del producto en esa categoría
+    - fecha_mas_critica: la fecha de vencimiento más próxima (o más antigua si vencidos)
+    - cantidad_total: suma de unidades en esos lotes
+    - num_lotes: cantidad de lotes distintos
+    """
+    grupos = {}
+    for lote in queryset:
+        pid = lote.producto_id
+        if pid not in grupos:
+            grupos[pid] = {
+                'producto': lote.producto,
+                'lotes': [],
+                'fecha_mas_critica': lote.fecha_vencimiento,
+                'cantidad_total': 0,
+                'num_lotes': 0,
+            }
+        grupos[pid]['lotes'].append(lote)
+        grupos[pid]['cantidad_total'] += lote.cantidad
+        grupos[pid]['num_lotes'] += 1
+        # Para vencidos: la más antigua (min). Para próximos: la más cercana (min también).
+        if lote.fecha_vencimiento and lote.fecha_vencimiento < grupos[pid]['fecha_mas_critica']:
+            grupos[pid]['fecha_mas_critica'] = lote.fecha_vencimiento
+    return sorted(grupos.values(), key=lambda g: g['fecha_mas_critica'] or timezone.localdate())
+
+
+@login_required
 def alertas_vencimiento(request):
     hoy = timezone.localdate()
-    lotes_vencidos = LoteProducto.objects.filter(fecha_vencimiento__lt=hoy).select_related('producto')
+
+    lotes_vencidos = LoteProducto.objects.filter(
+        fecha_vencimiento__lt=hoy
+    ).select_related('producto').order_by('fecha_vencimiento')
+
     lotes_criticos = LoteProducto.objects.filter(
         fecha_vencimiento__range=[hoy, hoy + timedelta(days=7)]
-    ).select_related('producto')
+    ).select_related('producto').order_by('fecha_vencimiento')
+
     lotes_proximos = LoteProducto.objects.filter(
         fecha_vencimiento__range=[hoy + timedelta(days=8), hoy + timedelta(days=30)]
-    ).select_related('producto')
+    ).select_related('producto').order_by('fecha_vencimiento')
 
     return render(request, 'inventario/alertas_vencimiento.html', {
-        'lotes_vencidos': lotes_vencidos,
-        'lotes_criticos': lotes_criticos,
-        'lotes_proximos': lotes_proximos,
+        'grupos_vencidos': _agrupar_lotes_por_producto(lotes_vencidos),
+        'grupos_criticos': _agrupar_lotes_por_producto(lotes_criticos),
+        'grupos_proximos': _agrupar_lotes_por_producto(lotes_proximos),
+        'total_vencidos': lotes_vencidos.values('producto').distinct().count(),
+        'total_criticos': lotes_criticos.values('producto').distinct().count(),
+        'total_proximos': lotes_proximos.values('producto').distinct().count(),
     })
+
+
+@login_required
+@require_POST
+def silenciar_alerta(request):
+    """AJAX: oculta una alerta permanentemente o la pospone N días."""
+    tipo = request.POST.get('tipo')
+    objeto_id = request.POST.get('objeto_id')
+    dias = request.POST.get('dias')  # None/'0' = permanente, número = posponer
+
+    if tipo not in ('stock', 'vencimiento') or not objeto_id:
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos'}, status=400)
+
+    pospuesto_hasta = None
+    if dias and dias != '0':
+        pospuesto_hasta = timezone.localdate() + timedelta(days=int(dias))
+
+    AlertaSilenciada.objects.update_or_create(
+        usuario=request.user,
+        tipo=tipo,
+        objeto_id=int(objeto_id),
+        defaults={'pospuesto_hasta': pospuesto_hasta},
+    )
+    return JsonResponse({'ok': True})
 
 
 # ── Proveedores ──────────────────────────────────────────────────────────────

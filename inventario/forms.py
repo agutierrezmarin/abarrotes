@@ -3,6 +3,19 @@ from .models import Producto, LoteProducto, Proveedor
 
 
 class ProductoForm(forms.ModelForm):
+    # Campos opcionales para registrar el lote inicial al crear el producto
+    numero_lote_inicial = forms.CharField(
+        required=False, max_length=50,
+        label='Número de lote',
+        help_text='Opcional. Identificador del lote (ej: L2024-001).'
+    )
+    fecha_vencimiento_inicial = forms.DateField(
+        required=False,
+        label='Fecha de caducidad',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text='Opcional. Fecha de vencimiento del stock inicial.'
+    )
+
     class Meta:
         model = Producto
         fields = [
