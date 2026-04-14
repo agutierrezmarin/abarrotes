@@ -69,6 +69,11 @@ def reporte_administrador(request):
         fecha_vencimiento__gte=hoy
     ).select_related('producto').order_by('fecha_vencimiento')
 
+    # Tickets dados de baja del mes
+    bajas_mes = Venta.objects.filter(
+        estado='cancelada', fecha_baja__date__gte=inicio_mes
+    ).select_related('vendedor', 'dado_de_baja_por').order_by('-fecha_baja')
+
     return render(request, 'reportes/administrador.html', {
         'resumen_hoy': {'ventas': ventas_hoy.count(), 'total': ventas_hoy.aggregate(t=Sum('total'))['t'] or 0},
         'resumen_semana': {'ventas': ventas_semana.count(), 'total': ventas_semana.aggregate(t=Sum('total'))['t'] or 0},
@@ -76,6 +81,7 @@ def reporte_administrador(request):
         'top_productos': top_productos,
         'productos_stock_bajo': productos_stock_bajo,
         'lotes_alerta': lotes_alerta,
+        'bajas_mes': bajas_mes,
         'hoy': hoy,
     })
 
@@ -127,10 +133,16 @@ def reporte_gerente(request):
         utilidad=F('ingresos') - F('costo')
     ).order_by('-ingresos')[:10]
 
+    # Tickets dados de baja del mes
+    bajas_mes = Venta.objects.filter(
+        estado='cancelada', fecha_baja__date__gte=inicio_mes
+    ).select_related('vendedor', 'dado_de_baja_por').order_by('-fecha_baja')
+
     return render(request, 'reportes/gerente.html', {
         'rendimiento_vendedores': rendimiento_vendedores,
         'ventas_por_dia': list(ventas_por_dia),
         'utilidad_productos': utilidad_productos,
+        'bajas_mes': bajas_mes,
         'mes': inicio_mes,
         'hoy': hoy,
     })

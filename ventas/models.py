@@ -30,6 +30,12 @@ class Venta(models.Model):
     notas = models.TextField(blank=True)
     fecha_venta = models.DateTimeField(default=timezone.now)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    observacion_baja = models.TextField(blank=True, verbose_name='Motivo de baja')
+    dado_de_baja_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='bajas_registradas', verbose_name='Dado de baja por'
+    )
+    fecha_baja = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de baja')
 
     class Meta:
         verbose_name = 'Venta'

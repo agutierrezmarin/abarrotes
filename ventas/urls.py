@@ -10,5 +10,6 @@ urlpatterns = [
     path('completar/', views.completar_venta, name='completar_venta'),
     path('ticket/<int:pk>/', views.ticket_venta, name='ticket'),
     path('historial/', views.historial_ventas, name='historial'),
+    path('baja/<int:pk>/', views.dar_de_baja_ticket, name='dar_de_baja'),
     path('buscar/', views.buscar_producto_ajax, name='buscar_ajax'),
 ]

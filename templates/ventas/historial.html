@@ -5,23 +5,114 @@
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Ticket</th><th>Vendedor</th><th>Articulos</th><th>Total</th><th>Pago</th><th>Fecha</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Vendedor</th>
+          <th>Artículos</th>
+          <th>Total</th>
+          <th>Pago</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
         {% for v in ventas %}
-        <tr>
+        <tr class="{% if v.estado == 'cancelada' %}table-danger{% endif %}">
           <td class="fw-semibold">#{{ v.numero_ticket }}</td>
           <td>{{ v.vendedor.get_full_name|default:v.vendedor.username }}</td>
           <td>{{ v.items.count }} art.</td>
-          <td class="fw-bold text-success">Bs. {{ v.total|floatformat:2 }}</td>
+          <td class="fw-bold {% if v.estado == 'cancelada' %}text-danger text-decoration-line-through{% else %}text-success{% endif %}">
+            Bs. {{ v.total|floatformat:2 }}
+          </td>
           <td><span class="badge bg-light text-dark">{{ v.get_metodo_pago_display }}</span></td>
           <td><small>{{ v.fecha_venta|date:"d/m/Y H:i" }}</small></td>
-          <td><a href="/ventas/ticket/{{ v.pk }}/" class="btn btn-sm btn-outline-primary">Ver ticket</a></td>
+          <td>
+            {% if v.estado == 'cancelada' %}
+              <span class="badge bg-danger">Baja</span>
+              <div class="text-muted" style="font-size:.75rem;max-width:180px">
+                <i class="fas fa-user me-1"></i>{{ v.dado_de_baja_por.get_full_name|default:v.dado_de_baja_por.username|default:"—" }}
+                {% if v.fecha_baja %}<br><i class="fas fa-clock me-1"></i>{{ v.fecha_baja|date:"d/m/Y H:i" }}{% endif %}
+                {% if v.observacion_baja %}
+                  <br><span title="{{ v.observacion_baja }}"><i class="fas fa-comment me-1"></i>{{ v.observacion_baja|truncatechars:50 }}</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <span class="badge bg-success">Completada</span>
+            {% endif %}
+          </td>
+          <td class="text-end" style="white-space:nowrap">
+            <a href="{% url 'ventas:ticket' v.pk %}" class="btn btn-sm btn-outline-primary">Ver ticket</a>
+            {% if puede_dar_de_baja and v.estado == 'completada' %}
+              <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                data-bs-toggle="modal" data-bs-target="#modalBaja"
+                data-ticket-id="{{ v.pk }}"
+                data-ticket-num="{{ v.numero_ticket }}"
+                data-ticket-total="{{ v.total|floatformat:2 }}">
+                Dar de baja
+              </button>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">No hay ventas registradas.</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-4">No hay ventas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+{% if puede_dar_de_baja %}
+<!-- Modal de confirmación de baja -->
+<div class="modal fade" id="modalBaja" tabindex="-1" aria-labelledby="modalBajaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalBajaLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Dar de baja ticket
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formBaja" action="">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="mb-1">Ticket: <strong id="bajaTicketNum"></strong></p>
+          <p class="mb-3">Total: <strong class="text-success" id="bajaTicketTotal"></strong></p>
+          <div class="alert alert-warning py-2">
+            <i class="fas fa-undo me-1"></i>
+            Esta acción revertirá el stock de los productos y marcará el ticket como dado de baja.
+          </div>
+          <div class="mb-3">
+            <label for="observacion" class="form-label fw-semibold">
+              Motivo de baja <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" id="observacion" name="observacion" rows="3"
+              placeholder="Describe el motivo por el que se da de baja este ticket..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-ban me-1"></i>Confirmar baja
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('modalBaja').addEventListener('show.bs.modal', function (event) {
+  var btn = event.relatedTarget;
+  var ticketId  = btn.getAttribute('data-ticket-id');
+  var ticketNum = btn.getAttribute('data-ticket-num');
+  var ticketTotal = btn.getAttribute('data-ticket-total');
+  document.getElementById('bajaTicketNum').textContent = '#' + ticketNum;
+  document.getElementById('bajaTicketTotal').textContent = 'Bs. ' + ticketTotal;
+  document.getElementById('formBaja').action = '/ventas/baja/' + ticketId + '/';
+  document.getElementById('observacion').value = '';
+});
+</script>
+{% endif %}
 {% endblock %}

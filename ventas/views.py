@@ -161,10 +161,59 @@ def ticket_venta(request, pk):
     return render(request, 'ventas/ticket.html', {'venta': venta, 'items': venta.items.select_related('producto').all()})
 
 
+def es_admin_o_gerente(user):
+    return user.groups.filter(name__in=['Administrador', 'Gerente']).exists() or user.is_superuser
+
+
 @login_required
 def historial_ventas(request):
-    ventas = Venta.objects.filter(estado='completada').select_related('vendedor').order_by('-fecha_venta')
-    return render(request, 'ventas/historial.html', {'ventas': ventas})
+    ventas = Venta.objects.filter(
+        estado__in=['completada', 'cancelada']
+    ).select_related('vendedor', 'dado_de_baja_por').order_by('-fecha_venta')
+    puede_dar_de_baja = es_admin_o_gerente(request.user)
+    return render(request, 'ventas/historial.html', {
+        'ventas': ventas,
+        'puede_dar_de_baja': puede_dar_de_baja,
+    })
+
+
+@login_required
+@transaction.atomic
+def dar_de_baja_ticket(request, pk):
+    if not es_admin_o_gerente(request.user):
+        messages.error(request, 'No tienes permiso para dar de baja tickets.')
+        return redirect('ventas:historial')
+
+    if request.method == 'POST':
+        venta = get_object_or_404(Venta, pk=pk, estado='completada')
+        observacion = request.POST.get('observacion', '').strip()
+        if not observacion:
+            messages.error(request, 'Debes ingresar una observación para dar de baja el ticket.')
+            return redirect('ventas:historial')
+
+        # Revertir stock descontado
+        for item in venta.items.select_related('producto').all():
+            producto = item.producto
+            uds = item.unidades_descontadas or item.cantidad
+            stock_anterior = producto.stock_actual
+            producto.stock_actual += uds
+            producto.save()
+            MovimientoInventario.objects.create(
+                producto=producto, tipo='ajuste', cantidad=uds,
+                stock_anterior=stock_anterior, stock_nuevo=producto.stock_actual,
+                motivo=f'Baja de ticket #{venta.numero_ticket} — {observacion[:80]}',
+                usuario=request.user
+            )
+
+        venta.estado = 'cancelada'
+        venta.observacion_baja = observacion
+        venta.dado_de_baja_por = request.user
+        venta.fecha_baja = timezone.now()
+        venta.save()
+
+        messages.success(request, f'Ticket #{venta.numero_ticket} dado de baja correctamente.')
+
+    return redirect('ventas:historial')
 
 
 @login_required
